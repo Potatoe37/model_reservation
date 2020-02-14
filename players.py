@@ -88,7 +88,7 @@ class StrategicPlayer(Player):
         self.name = "Strategic "+name
 
     def newadvance(self,loss,wait):
-        self.advance = max(0,self.advance+wait-self.alpha*loss)
+        self.advance = int(max(0,self.advance+wait-self.alpha*loss))
 
     def reserve(self,time,ar_time,j):
         self.reservations[j] = (max(time,ar_time-self.advance),ar_time)
