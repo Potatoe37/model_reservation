@@ -11,29 +11,31 @@ class Game:
         @param event_time: The time of the event to insert
         @return: None
         """
-        self.event_times.append(10000000000)
-        tmp1 = event_time
-        tmp2 = 0
-        place_founded = False
-        i = 0
-        while i < len(self.event_times):
-            if (not place_founded) and event_time <= self.event_times[i]:
-                place_founded = True
-            if place_founded and event_time == self.event_times[i]:
-                self.event_times.pop(-1)
-                break
-            if place_founded:
-                tmp2 = self.event_times[i]
-                self.event_times[i] = tmp1
-                tmp1 = tmp2
-            i+=1
-    
+        if self.time != event_time:
+            self.event_times.append(10000000000)
+            tmp1 = event_time
+            tmp2 = 0
+            place_founded = False
+            i = 0
+            while i < len(self.event_times):
+                if (not place_founded) and event_time <= self.event_times[i]:
+                    place_founded = True
+                if place_founded and event_time == self.event_times[i]:
+                    self.event_times.pop(-1)
+                    break
+                if place_founded:
+                    tmp2 = self.event_times[i]
+                    self.event_times[i] = tmp1
+                    tmp1 = tmp2
+                i+=1
+
     def __init__(self,players,lbda,initial_size=100,mu=0):
         self.initial_size = initial_size #The number of packets already created
         self.players = deepcopy(players) #The list of players playing the game
         self.n_players = len(players) #The number of players
         self.lbda = lbda #The lambda of the game
         self.event_times = [] #The list of times of next happening events (sorted)
+        self.time = -1 #The time of the game
         if mu==0:
             self.mu = sum([self.players[i].lbda for i in range(self.n_players)])/self.n_players/self.n_players #The mu of the game
         else:
@@ -71,7 +73,6 @@ class Game:
         for j in range(self.n_players):
             for i in range(initial_size):
                 self.reservations[j][i] = -1
-        self.time = 0 #The time of the game
         self.packets = [] #The file of packets to treat (i,j,t,delta) for player i packet j, arriv time t, treatment time delta
         self.treatment = -1 #The remaining treatement time
 
@@ -106,12 +107,12 @@ class Game:
             for j in self.reservations[i]:
                 if self.reservations[i][j]==self.time:
                     vprint(f"Player {i} ({self.players[i].name}) reserved at time {self.time} for packet {j}.")
-                    self.packets.append((i,j,self.arrival_times[i][j],int(np.random.exponential(self.mu))))
+                    self.packets.append((i,j,self.arrival_times[i][j],np.random.exponential(self.mu)))
                     vprint(f"Adding packet {j} to packets queue...")
                     vprint(f"Queue state: {self.packets}")
         # Treating packets
         if self.packets!=[]:    
-            if self.treatment==-1:
+            if self.treatment<self.time:
                 #Premier packet à arriver dans la liste 
                 i,j,t,delta = self.packets[0]
                 vprint(f"Packet ({i},{j}) next in the file. Arrival time: {t}, current time: {self.time}")
@@ -156,8 +157,10 @@ class Game:
                 vprint("No packet in queue")
 
     def game(self,duration=100000):
+        i=0
         while self.time<duration:
-            i=0
+            if self.time==-1:
+                self.time = self.event_times.pop(0)
             if int(self.time/duration*1000)/10>i:
                 print(f"Execution : {int(self.time/duration*1000)/10}%")
                 i = int(self.time/duration*1000)/10
@@ -171,6 +174,6 @@ class Game:
             vprint(f"Reservation Times: {self.reservations}")
             self.turn()
             self.time = self.event_times.pop(0)
-            input()
+            #input()
         for i in range(self.n_players):
             print(f"Player {i+1} ({self.players[i].name}):\n - Total packets processed: {self.players[i].processed}\n - Total packets lost: {self.players[i].total_loss}\n - Total waiting time: {self.players[i].total_waiting_time}\n - Final advance: {self.players[i].advance}\n")
