@@ -58,7 +58,7 @@ class Player:
     def update_stats(self,loss,wait,mu):
         # The packet as lost
         if loss==1:
-            self.alpha *= 2
+            #self.alpha *= 2
             self.total_loss += 1
         # The packet was processed
         else:
@@ -68,7 +68,7 @@ class Player:
 
 class RandomPlayer(Player):
 
-    def __init__(self,alpha):
+    def __init__(self):
         self.name = "Random" 
         self.reservations = {}
 
@@ -77,6 +77,23 @@ class RandomPlayer(Player):
 
     def reserve(self,time,ar_time,j):
         self.reservations[j] = (int((time+(ar_time-time)*np.random.random())),ar_time)
+        return self.reservations[j][0]
+    
+    def treated(self,state,packet_id,time,mu):
+        wait = time - self.reservations[packet_id][1] - mu
+        self.update_stats(1-state,wait,mu)
+
+class CarefulPlayer(Player):
+
+    def __init__(self):
+        self.name = "Careful" 
+        self.reservations = {}
+
+    def newadvance(self,loss,wait):
+        return np.random.random()
+
+    def reserve(self,time,ar_time,j):
+        self.reservations[j] = (ar_time,ar_time)
         return self.reservations[j][0]
     
     def treated(self,state,packet_id,time,mu):
@@ -109,8 +126,9 @@ class StrategicPlayer(Player):
         vprint(f"New advance: {self.advance}")
 
 
-random1 = RandomPlayer(1)
+random1 = RandomPlayer()
 strat0 = StrategicPlayer("Boss0",1)
 strat1 = StrategicPlayer("Boss1",10)
 strat2 = StrategicPlayer("Boss2",100)
 strat3 = StrategicPlayer("Boss3",1000)
+caref1 = CarefulPlayer()
