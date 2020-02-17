@@ -162,9 +162,9 @@ class Game:
         while self.time<duration:
             if self.time==-1:
                 self.time = self.event_times.pop(0)
-            if int(self.time/duration*1000)/10>i:
-                print(f"Execution : {int(self.time/duration*1000)/10}%")
-                i = int(self.time/duration*1000)/10
+            if int(self.time/duration*100)>i:
+                print(f"Execution : {int(self.time/duration*100)}%")
+                i = int(self.time/duration*100)
             vprint(f"Time: {self.time}")
             vprint(f"Event times: {self.event_times}")
             vprint(f"Remaining treatment time: {self.treatment-self.time}")
