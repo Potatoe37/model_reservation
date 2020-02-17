@@ -3,6 +3,7 @@ def poisson(lbda):
     return T
 
 verb = False
+stop = False
 
 def vprint(s):
     if verb:

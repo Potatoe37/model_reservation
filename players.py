@@ -76,7 +76,11 @@ class RandomPlayer(Player):
         return np.random.random()
 
     def reserve(self,time,ar_time,j):
-        self.reservations[j] = (int((time+(ar_time-time)*np.random.random())),ar_time)
+        self.advance = (ar_time-time)*np.random.random()
+        if self.advance<0:
+            for i in range(10):
+                print("STOOOOOOOOOP")
+        self.reservations[j] = ((time+self.advance,ar_time))
         return self.reservations[j][0]
     
     def treated(self,state,packet_id,time,mu):

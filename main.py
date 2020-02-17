@@ -87,11 +87,13 @@ class Game:
         @return: None
         """
         nu = self.players[player_i].nu
-        time = self.last_arrival[player_i] + np.random.exponential(self.lbda)
+        time = max(self.last_arrival[player_i],self.time) + np.random.exponential(self.lbda)
         self.insert_event(time)
         self.last_arrival[player_i] = time 
         self.arrival_times[player_i][packet_id] = time
         self.revelation[player_i][packet_id] = max(self.time+0.01,time-nu*np.random.random())
+        print(f"AR TIME = {time}")
+        print(f"RV TIME = {self.revelation[player_i][packet_id]}")
         self.insert_event(self.revelation[player_i][packet_id])
         self.reservations[player_i][packet_id] = -1
     
@@ -172,9 +174,9 @@ class Game:
         while self.time<duration:
             if self.time==-1:
                 self.time = self.event_times.pop(0)
-            if int(self.time/duration*100)>i:
-                print(f"Execution : {int(self.time/duration*100)}%")
-                i = int(self.time/duration*100)
+            if int(self.time/duration*20)>i:
+                print(f"Execution : {int(self.time/duration*20)*5}%")
+                i = int(self.time/duration*20)
             vprint(f"Time: {self.time}")
             vprint(f"Event times: {self.event_times}")
             vprint(f"Remaining treatment time: {self.treatment-self.time}")
@@ -186,9 +188,10 @@ class Game:
             vprint("")
             self.turn()
             self.time = self.event_times.pop(0)
-            if funs.verb:
+            vprint("------")
+            if funs.stop:
                 input()
         for i in range(self.n_players):
             if plot:
-                ppm.plotXY(np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player {i} ({self.players[i].name})")
+                ppm.plotXY(np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
             print(f"Player {i+1} ({self.players[i].name}):\n - Total packets processed: {self.players[i].processed}\n - Total packets lost: {self.players[i].total_loss}\n - Total waiting time: {self.players[i].total_waiting_time}\n - Final advance: {self.players[i].advance}\n")
