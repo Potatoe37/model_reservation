@@ -1,6 +1,7 @@
 import players
 import numpy as np
 import functions as funs
+import plotparam as ppm
 from functions import vprint
 from copy import deepcopy
 
@@ -76,6 +77,7 @@ class Game:
                 self.reservations[j][i] = -1
         self.packets = [] #The file of packets to treat (i,j,t,delta) for player i packet j, arriv time t, treatment time delta
         self.treatment = -1 #The remaining treatement time
+        self.y = [[[0] for i in range(3)] for i in range(self.n_players)] #For plot
 
     def update(self,player_i,packet_id):
         """
@@ -93,6 +95,11 @@ class Game:
         self.insert_event(self.revelation[player_i][packet_id])
         self.reservations[player_i][packet_id] = -1
     
+    def add_plot(self,player_i,ar_time,loss):
+        self.y[player_i][0].append(self.players[player_i].advance)
+        self.y[player_i][1].append(self.y[player_i][1][-1]+self.time-ar_time)
+        self.y[player_i][2].append(self.y[player_i][2][-1]+loss)
+
     def turn(self):
         # Reavealing arrival time to clients
         for i in range(self.n_players):
@@ -120,6 +127,7 @@ class Game:
                 while self.packets!=[] and t > self.time:
                     vprint(f"The packet is not arrived yet, packet lost")
                     self.players[i].treated(0,j,self.time,self.mu)
+                    self.add_plot(i,self.time,1) #For plotting
                     self.update(i,j) #Replacing the packet
                     self.packets.pop(0)
                     if self.packets!=[]:
@@ -135,6 +143,7 @@ class Game:
                 i,j,t,delta = self.packets.pop(0)
                 vprint(f"Packet ({i},{j}) treated.")
                 self.players[i].treated(1,j,self.time,self.mu) # Inform the player his packet have been treated
+                self.add_plot(i,t,0) 
                 self.update(i,j)
                 # Prise en charge d'un nouveau packet
                 if self.packets!=[]:
@@ -143,6 +152,7 @@ class Game:
                     while self.packets!=[] and t > self.time:
                         vprint(f"The packet is not arrived yet, packet lost")
                         self.players[i].treated(0,j,self.time,self.mu)
+                        self.add_plot(i,self.time,1)
                         self.update(i,j)
                         self.packets.pop(0)
                         if self.packets!=[]:
@@ -159,8 +169,6 @@ class Game:
 
     def game(self,plot=False,duration=100000):
         i=0
-        if plot:
-            y = [[[] for i in range(3)] for i in range(self.n_players)]
         while self.time<duration:
             if self.time==-1:
                 self.time = self.event_times.pop(0)
@@ -181,4 +189,6 @@ class Game:
             if funs.verb:
                 input()
         for i in range(self.n_players):
+            if plot:
+                ppm.plotXY(np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player {i} ({self.players[i].name})")
             print(f"Player {i+1} ({self.players[i].name}):\n - Total packets processed: {self.players[i].processed}\n - Total packets lost: {self.players[i].total_loss}\n - Total waiting time: {self.players[i].total_waiting_time}\n - Final advance: {self.players[i].advance}\n")
