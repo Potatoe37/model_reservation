@@ -157,8 +157,10 @@ class Game:
             else:
                 vprint("No packet in queue")
 
-    def game(self,duration=100000):
+    def game(self,plot=False,duration=100000):
         i=0
+        if plot:
+            y = [[[] for i in range(3)] for i in range(self.n_players)]
         while self.time<duration:
             if self.time==-1:
                 self.time = self.event_times.pop(0)
@@ -173,6 +175,7 @@ class Game:
             vprint(f"Arrival Times: {self.arrival_times}")
             vprint(f"Last Arrival {self.last_arrival}")
             vprint(f"Reservation Times: {self.reservations}")
+            vprint("")
             self.turn()
             self.time = self.event_times.pop(0)
             if funs.verb:
