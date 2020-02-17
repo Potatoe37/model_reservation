@@ -1,5 +1,6 @@
 import players
 import numpy as np
+import functions as funs
 from functions import vprint
 from copy import deepcopy
 
@@ -33,13 +34,13 @@ class Game:
         self.initial_size = initial_size #The number of packets already created
         self.players = deepcopy(players) #The list of players playing the game
         self.n_players = len(players) #The number of players
-        self.lbda = lbda #The lambda of the game
+        self.lbda = lbda #The lambda of the game (mean arrival time for the players)
         self.event_times = [] #The list of times of next happening events (sorted)
         self.time = -1 #The time of the game
         if mu==0:
             self.mu = sum([self.players[i].lbda for i in range(self.n_players)])/self.n_players/self.n_players #The mu of the game
         else:
-            self.mu = mu
+            self.mu = mu #The mean treatment times of the packets
         def initialisation(n_players,lbda,initial_size=100):
             """
             @brief: Creates the initail lists of arrival times and revelation times of each players
@@ -174,6 +175,7 @@ class Game:
             vprint(f"Reservation Times: {self.reservations}")
             self.turn()
             self.time = self.event_times.pop(0)
-            #input()
+            if funs.verb:
+                input()
         for i in range(self.n_players):
             print(f"Player {i+1} ({self.players[i].name}):\n - Total packets processed: {self.players[i].processed}\n - Total packets lost: {self.players[i].total_loss}\n - Total waiting time: {self.players[i].total_waiting_time}\n - Final advance: {self.players[i].advance}\n")

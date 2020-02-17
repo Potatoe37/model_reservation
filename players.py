@@ -85,7 +85,8 @@ class RandomPlayer(Player):
 class StrategicPlayer(Player):
 
     def __init__(self,name,alpha):
-        self.name = "Strategic "+name
+        self.name = "Strategic "+name+" ("+str(alpha)+")"
+        self.alpha = alpha
 
     def newadvance(self,loss,wait):
         self.advance = max(0,self.advance+wait-self.alpha*loss)
@@ -96,7 +97,7 @@ class StrategicPlayer(Player):
     
     def treated(self,state,packet_id,time,mu):
         loss = 1-state
-        wait = time - self.reservations[packet_id][1] - mu
+        wait = max(0,time - self.reservations[packet_id][1] - mu)
         self.update_stats(loss,wait,mu)
         vprint("Updating advance")
         vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
@@ -107,5 +108,7 @@ class StrategicPlayer(Player):
 
 
 random1 = RandomPlayer(1)
-strat1 = StrategicPlayer("Boss1",5)
-strat2 = StrategicPlayer("Boss2",5)
+strat0 = StrategicPlayer("Boss0",1)
+strat1 = StrategicPlayer("Boss1",10)
+strat2 = StrategicPlayer("Boss2",100)
+strat3 = StrategicPlayer("Boss3",1000)
