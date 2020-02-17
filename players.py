@@ -70,6 +70,7 @@ class RandomPlayer(Player):
 
     def __init__(self,alpha):
         self.name = "Random" 
+        self.reservations = {}
 
     def newadvance(self,loss,wait):
         return np.random.random()
@@ -87,6 +88,7 @@ class StrategicPlayer(Player):
     def __init__(self,name,alpha):
         self.name = "Strategic "+name+" ("+str(alpha)+")"
         self.alpha = alpha
+        self.reservations = {}
 
     def newadvance(self,loss,wait):
         self.advance = max(0,self.advance+wait-self.alpha*loss)
