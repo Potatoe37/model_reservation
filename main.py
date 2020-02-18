@@ -99,11 +99,14 @@ class Game:
         self.insert_event(self.revelation[player_i][packet_id])
         self.reservations[player_i][packet_id] = -1
     
-    def add_plot(self,player_i,ar_time,loss):
+    def add_plot(self,player_i,packet_id,ar_time,loss):
         self.y[player_i][0].append(self.players[player_i].advance)
         self.y[player_i][1].append(self.y[player_i][1][-1]+self.time-ar_time)
         self.y[player_i][2].append(self.y[player_i][2][-1]+loss)
         self.y[player_i][3].append(self.time)
+        f = open("data.txt",mode="a")
+        f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\n")
+        f.close()
 
     def turn(self):
         # Reavealing arrival time to clients
@@ -132,7 +135,7 @@ class Game:
                 while self.packets!=[] and t > self.time:
                     vprint(f"The packet is not arrived yet, packet lost")
                     self.players[i].treated(0,j,self.time,self.mu)
-                    self.add_plot(i,self.time,1) #For plotting
+                    self.add_plot(i,j,self.time,1) #For plotting
                     self.update(i,j) #Replacing the packet
                     self.packets.pop(0)
                     if self.packets!=[]:
@@ -148,7 +151,7 @@ class Game:
                 i,j,t,delta = self.packets.pop(0)
                 vprint(f"Packet ({i},{j}) treated.")
                 self.players[i].treated(1,j,self.time,self.mu) # Inform the player his packet have been treated
-                self.add_plot(i,t,0) 
+                self.add_plot(i,j,t,0) 
                 self.update(i,j)
                 # Prise en charge d'un nouveau packet
                 if self.packets!=[]:
@@ -157,7 +160,7 @@ class Game:
                     while self.packets!=[] and t > self.time:
                         vprint(f"The packet is not arrived yet, packet lost")
                         self.players[i].treated(0,j,self.time,self.mu)
-                        self.add_plot(i,self.time,1)
+                        self.add_plot(i,j,self.time,1)
                         self.update(i,j)
                         self.packets.pop(0)
                         if self.packets!=[]:
@@ -174,6 +177,8 @@ class Game:
 
     def game(self,plot=False,duration=100000):
         i=0
+        f = open("data.txt",mode='w')
+        f.close()
         while self.time<duration:
             if self.time==-1:
                 self.time = self.event_times.pop(0)
