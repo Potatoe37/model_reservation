@@ -1,2 +1,4 @@
 figures/*.png
 __pycache__/*
+file.txt
+data.txt
