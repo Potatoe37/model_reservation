@@ -17,6 +17,8 @@ class Player:
     processed = 0 #Number of packets processed
     memory = 10 #How far the player remembers of the game  
     memory_loss = 0 #The loss of the player as far back as he can remember
+    advances_mem = [0 for i in range(memory)]
+    advance_mean_mem = 0
     wmax = 1 #The maximum maiting time
 
     def nexttime(self,time):

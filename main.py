@@ -77,7 +77,7 @@ class Game:
                 self.reservations[j][i] = -1
         self.packets = [] #The file of packets to treat (i,j,t,delta) for player i packet j, arriv time t, treatment time delta
         self.treatment = -1 #The remaining treatement time
-        self.y = [[[0] for i in range(3)] for i in range(self.n_players)] #For plot
+        self.y = [[[0] for i in range(4)] for i in range(self.n_players)] #For plot
         self.times = []
         self.tota = []
 
@@ -103,6 +103,7 @@ class Game:
         self.y[player_i][0].append(self.players[player_i].advance)
         self.y[player_i][1].append(self.y[player_i][1][-1]+self.time-ar_time)
         self.y[player_i][2].append(self.y[player_i][2][-1]+loss)
+        self.y[player_i][3].append(self.time)
 
     def turn(self):
         # Reavealing arrival time to clients
@@ -199,5 +200,6 @@ class Game:
             ppm.plotTime(np.array(self.times),np.array(self.tota),"Total Advance")
         for i in range(self.n_players):
             if plot:
-                ppm.plotXY(np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
+                #ppm.plotXY(np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
+                ppm.plotXYTime(np.array(self.y[i][3]),np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
             print(f"Player {i+1} ({self.players[i].name}):\n - Total packets processed: {self.players[i].processed}\n - Total packets lost: {self.players[i].total_loss}\n - Total waiting time: {self.players[i].total_waiting_time}\n - Final advance: {self.players[i].advance}\n")
