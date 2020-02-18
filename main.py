@@ -33,7 +33,7 @@ class Game:
 
     def __init__(self,players,lbda,initial_size=100,mu=0):
         self.initial_size = initial_size #The number of packets already created
-        self.players = deepcopy(players) #The list of players playing the game
+        self.players = [deepcopy(p) for p in players]  #The list of players playing the game
         self.n_players = len(players) #The number of players
         self.lbda = lbda #The lambda of the game (mean arrival time for the players)
         self.event_times = [] #The list of times of next happening events (sorted)
@@ -78,6 +78,8 @@ class Game:
         self.packets = [] #The file of packets to treat (i,j,t,delta) for player i packet j, arriv time t, treatment time delta
         self.treatment = -1 #The remaining treatement time
         self.y = [[[0] for i in range(3)] for i in range(self.n_players)] #For plot
+        self.times = []
+        self.tota = []
 
     def update(self,player_i,packet_id):
         """
@@ -92,8 +94,8 @@ class Game:
         self.last_arrival[player_i] = time 
         self.arrival_times[player_i][packet_id] = time
         self.revelation[player_i][packet_id] = max(self.time+0.01,time-nu*np.random.random())
-        print(f"AR TIME = {time}")
-        print(f"RV TIME = {self.revelation[player_i][packet_id]}")
+        #print(f"AR TIME = {time}")
+        #print(f"RV TIME = {self.revelation[player_i][packet_id]}")
         self.insert_event(self.revelation[player_i][packet_id])
         self.reservations[player_i][packet_id] = -1
     
@@ -187,10 +189,14 @@ class Game:
             vprint(f"Reservation Times: {self.reservations}")
             vprint("")
             self.turn()
+            self.times.append(self.time)
+            self.tota.append(sum([self.players[i].advance for i in range(self.n_players)]))
             self.time = self.event_times.pop(0)
             vprint("------")
             if funs.stop:
                 input()
+        if plot:
+            ppm.plotTime(np.array(self.times),np.array(self.tota),"Total Advance")
         for i in range(self.n_players):
             if plot:
                 ppm.plotXY(np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")

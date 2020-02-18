@@ -23,3 +23,19 @@ def plotXY(x, y, z, name):
     ax3.set_xlim(left=0, right=nSamples)
     plt.savefig('figures/' + name +'.png', bbox_inches='tight', dpi=dpi)
     plt.close()
+
+def plotTime(x,y,name):
+    nSamples = np.shape(x)[0]
+    rangeplot = range(0, nSamples)
+
+    fig, ax1 = plt.subplots()
+    ax1.plot(x[rangeplot], y[rangeplot], lw=1, alpha=0.9, color='r', label=r'Advance $a$')
+    #ax2.plot(x[rangeplot], y[rangeplot], lw=1, alpha=0.9, color='b', label=r'Cumulated waiting time')
+    ax1.set_ylabel(r'Advance',      fontsize=fontSize)
+    #ax2.set_ylabel(r'Waiting Time',      fontsize=fontSize)
+    ax1.set_xlabel(r'Time', fontsize=fontSize)
+    ax1.legend()
+    #ax2.legend()
+    ax1.set_xlim(left=0, right=x[nSamples-1])
+    plt.savefig('figures/' + name +'.png', bbox_inches='tight', dpi=dpi)
+    plt.close()

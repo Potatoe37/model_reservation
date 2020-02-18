@@ -17,6 +17,7 @@ class Player:
     processed = 0 #Number of packets processed
     memory = 10 #How far the player remembers of the game  
     memory_loss = 0 #The loss of the player as far back as he can remember
+    wmax = 1 #The maximum maiting time
 
     def nexttime(self,time):
         """
@@ -63,7 +64,7 @@ class Player:
         # The packet was processed
         else:
             self.processed += 1
-            self.alpha = self.initial_alpha
+            #self.alpha = self.initial_alpha
             self.total_waiting_time += wait+mu
 
 class RandomPlayer(Player):
@@ -77,9 +78,6 @@ class RandomPlayer(Player):
 
     def reserve(self,time,ar_time,j):
         self.advance = (ar_time-time)*np.random.random()
-        if self.advance<0:
-            for i in range(10):
-                print("STOOOOOOOOOP")
         self.reservations[j] = ((time+self.advance,ar_time))
         return self.reservations[j][0]
     
@@ -94,7 +92,7 @@ class CarefulPlayer(Player):
         self.reservations = {}
 
     def newadvance(self,loss,wait):
-        return np.random.random()
+        return 0
 
     def reserve(self,time,ar_time,j):
         self.reservations[j] = (ar_time,ar_time)
@@ -104,10 +102,10 @@ class CarefulPlayer(Player):
         wait = time - self.reservations[packet_id][1] - mu
         self.update_stats(1-state,wait,mu)
 
-class StrategicPlayer(Player):
+class StrategicPlayerAlpha(Player):
 
     def __init__(self,name,alpha):
-        self.name = "Strategic "+name+" ("+str(alpha)+")"
+        self.name = "Strategic "+name+r" ($\alpha$="+str(alpha)+")"
         self.alpha = alpha
         self.reservations = {}
 
@@ -129,10 +127,36 @@ class StrategicPlayer(Player):
         self.newadvance(loss,wait)
         vprint(f"New advance: {self.advance}")
 
+class StrategicPlayer(Player):
+
+    def __init__(self,name):
+        self.name = "Strategic "+name
+        self.reservations = {}
+        self.wmax = 1
+
+    def newadvance(self,loss,wait):
+        self.wmax = max(wait,self.wmax)
+        self.advance = max(0,self.advance+wait/self.wmax)
+
+    def reserve(self,time,ar_time,j):
+        self.reservations[j] = (max(time,ar_time-self.advance),ar_time)
+        return self.reservations[j][0]
+    
+    def treated(self,state,packet_id,time,mu):
+        loss = 1-state
+        wait = time - self.reservations[packet_id][1] - mu
+        self.update_stats(loss,wait,mu)
+        vprint("Updating advance")
+        vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
+        vprint(f"Packet was received back at {time}")
+        vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
+        self.newadvance(loss,wait)
+        vprint(f"New advance: {self.advance}")
 
 random1 = RandomPlayer()
-strat0 = StrategicPlayer("Boss0",1)
-strat1 = StrategicPlayer("Boss1",10)
-strat2 = StrategicPlayer("Boss2",100)
-strat3 = StrategicPlayer("Boss3",1000)
+alpha0 = StrategicPlayerAlpha("Alpha0",1)
+alpha1 = StrategicPlayerAlpha("Alpha1",10)
+alpha2 = StrategicPlayerAlpha("Alpha2",100)
+alpha3 = StrategicPlayerAlpha("Alpha3",1000)
+strat1 = StrategicPlayer("Boss1")
 caref1 = CarefulPlayer()
