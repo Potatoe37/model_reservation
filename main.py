@@ -105,7 +105,7 @@ class Game:
         self.y[player_i][2].append(self.y[player_i][2][-1]+loss)
         self.y[player_i][3].append(self.time)
         f = open("data.txt",mode="a")
-        f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\n")
+        f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\t{loss}\n")
         f.close()
 
     def turn(self):
@@ -135,7 +135,7 @@ class Game:
                 while self.packets!=[] and t > self.time:
                     vprint(f"The packet is not arrived yet, packet lost")
                     self.players[i].treated(0,j,self.time,self.mu)
-                    self.add_plot(i,j,self.time,1) #For plotting
+                    self.add_plot(i,j,t,1) #For plotting
                     self.update(i,j) #Replacing the packet
                     self.packets.pop(0)
                     if self.packets!=[]:
@@ -160,7 +160,7 @@ class Game:
                     while self.packets!=[] and t > self.time:
                         vprint(f"The packet is not arrived yet, packet lost")
                         self.players[i].treated(0,j,self.time,self.mu)
-                        self.add_plot(i,j,self.time,1)
+                        self.add_plot(i,j,t,1)
                         self.update(i,j)
                         self.packets.pop(0)
                         if self.packets!=[]:
