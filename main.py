@@ -32,6 +32,14 @@ class Game:
                 i+=1
 
     def __init__(self,players,lbda,initial_size=100,mu=0):
+        """
+        @brief: Initialisation of the game
+        @param players: list of participationg players
+        @param lbda: the parameter lambda of all players (mean time between two packets arrival)
+        @param initial_size: how far the game is anticipated (default 100)
+        @param mu: the parameter mu of the game (mean treatment time of a packet by the server) (default lbda/number of players)
+        @return: Object Game
+        """
         self.initial_size = initial_size #The number of packets already created
         self.players = [deepcopy(p) for p in players]  #The list of players playing the game
         self.n_players = len(players) #The number of players
@@ -59,7 +67,7 @@ class Game:
                 time = 0
                 for j in range(initial_size):
                     time += np.random.exponential(self.lbda)
-                    revelation = max(0,time-nu*np.random.random())
+                    revelation = max(0,time-2*nu*np.random.random())
                     ari[j] = time
                     revi[j] = revelation
                     self.insert_event(time)
@@ -93,7 +101,7 @@ class Game:
         self.insert_event(time)
         self.last_arrival[player_i] = time 
         self.arrival_times[player_i][packet_id] = time
-        self.revelation[player_i][packet_id] = max(self.time+0.01,time-nu*np.random.random())
+        self.revelation[player_i][packet_id] = max(self.time+0.01,time-2*nu*np.random.random())
         #print(f"AR TIME = {time}")
         #print(f"RV TIME = {self.revelation[player_i][packet_id]}")
         self.insert_event(self.revelation[player_i][packet_id])
@@ -101,11 +109,11 @@ class Game:
     
     def add_plot(self,player_i,packet_id,ar_time,loss):
         self.y[player_i][0].append(self.players[player_i].advance)
-        self.y[player_i][1].append(self.y[player_i][1][-1]+self.time-ar_time)
+        self.y[player_i][1].append(self.y[player_i][1][-1]+max(0,self.time-ar_time))
         self.y[player_i][2].append(self.y[player_i][2][-1]+loss)
         self.y[player_i][3].append(self.time)
         f = open("data.txt",mode="a")
-        f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\t{loss}\n")
+        f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\n")
         f.close()
 
     def turn(self):
@@ -208,3 +216,4 @@ class Game:
                 #ppm.plotXY(np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
                 ppm.plotXYTime(np.array(self.y[i][3]),np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
             print(f"Player {i+1} ({self.players[i].name}):\n - Total packets processed: {self.players[i].processed}\n - Total packets lost: {self.players[i].total_loss}\n - Total waiting time: {self.players[i].total_waiting_time}\n - Final advance: {self.players[i].advance}\n")
+            
