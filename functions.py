@@ -7,4 +7,4 @@ stop = True
 
 def vprint(s):
     if verb:
-        print(s)  
+        print(s)

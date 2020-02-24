@@ -86,8 +86,6 @@ class Game:
                     revelation = max(0,time-2*nu*np.random.random())
                     ari[j] = time
                     revi[j] = revelation
-                    #self.insert_event(time)
-                    #self.insert_event((revelation,0,i,j))
                     self.event_times.append((revelation,0,i,j))
                 ar.append(ari)
                 rev.append(revi)
@@ -123,7 +121,6 @@ class Game:
         """
         nu = self.players[player_i].nu
         time = max(self.last_arrival[player_i],self.time) + np.random.exponential(self.lbda)
-        #self.insert_event(time)
         self.last_arrival[player_i] = time 
         self.arrival_times[player_i][packet_id] = time
         self.revelation[player_i][packet_id] = max(self.time+0.01,time-2*nu*np.random.random())
@@ -138,7 +135,7 @@ class Game:
         self.y[player_i][2].append(self.y[player_i][2][-1]+loss)
         self.y[player_i][3].append(self.time)
         f = open("data.txt",mode="a")
-        f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\n")
+        f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\t{loss}\n")
         f.close()
 
     def turn(self):
@@ -212,6 +209,7 @@ class Game:
         self.trettt+=tt.time()-ttt
 
     def game(self,plot=False,duration=100000):
+        self.totttt = tt.time()
         i=0
         f = open("data.txt",mode='w')
         f.close()
@@ -244,6 +242,7 @@ class Game:
             #if funs.stop:
             #    input()
             self.othttt2 += tt.time()-ttt
+        self.totttt = tt.time() - self.totttt
         if plot:
             ppm.plotTime(np.array(self.times),np.array(self.tota),"Total Advance")
         for i in range(self.n_players):
@@ -251,4 +250,4 @@ class Game:
                 #ppm.plotXY(np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
                 ppm.plotXYTime(np.array(self.y[i][3]),np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
             print(f"Player {i+1} ({self.players[i].name}):\n - Total packets processed: {self.players[i].processed}\n - Total packets lost: {self.players[i].total_loss}\n - Total waiting time: {self.players[i].total_waiting_time}\n - Final advance: {self.players[i].advance}\n")
-        print(f"TTT:\n - Revelation: {self.revttt}s\n - Reservation: {self.resttt}s\n - Treatment: {self.trettt}s\n - Insertion: {self.insttt}s\n - Others: {self.othttt}s\n - Others2: {self.othttt2}s") 
+        print(f"TTT:\n - Revelation: {self.revttt}s\n - Reservation: {self.resttt}s\n - Treatment: {self.trettt}s\n - Insertion: {self.insttt}s\n - Others: {self.othttt}s\n - Others2: {self.othttt2}s\n - Total: {self.totttt}s") 

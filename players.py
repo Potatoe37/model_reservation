@@ -156,7 +156,38 @@ class StrategicPlayer(Player):
         self.newadvance(loss,wait)
         #vprint(f"New advance: {self.advance}")
 
+class MixedAlphaPlayer(Player):
+
+    def __init__(self,name,alpha):
+        self.name = "Mixed "+name
+        self.reservations = {}
+        self.wmax = 1
+        self.alpha = alpha
+
+    def newadvance(self,loss,wait):
+        self.wmax = max(wait,self.wmax)
+        self.advance = max(0,self.advance+wait/self.wmax-self.alpha*loss)
+
+    def reserve(self,time,ar_time,j):
+        self.reservations[j] = (max(time,ar_time-self.advance),ar_time)
+        return self.reservations[j][0]
+    
+    def treated(self,state,packet_id,time,mu):
+        loss = 1-state
+        wait = time - self.reservations[packet_id][1] - mu
+        self.update_stats(loss,wait,mu)
+        #vprint("Updating advance")
+        #vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
+        #vprint(f"Packet was received back at {time}")
+        #vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
+        self.newadvance(loss,wait)
+        #vprint(f"New advance: {self.advance}")
+
 random1 = RandomPlayer()
+mixal0 = MixedAlphaPlayer("MixAlpha0",1)
+mixal1 = MixedAlphaPlayer("MixAlpha1",10)
+mixal2 = MixedAlphaPlayer("MixAlpha2",100)
+mixal3 = MixedAlphaPlayer("MixAlpha3",1000)
 alpha0 = StrategicPlayerAlpha("Alpha0",1)
 alpha1 = StrategicPlayerAlpha("Alpha1",10)
 alpha2 = StrategicPlayerAlpha("Alpha2",100)
