@@ -120,14 +120,15 @@ class StrategicPlayerAlpha(Player):
     
     def treated(self,state,packet_id,time,mu):
         loss = 1-state
-        wait = max(0,time - self.reservations[packet_id][1] - mu)
+        wait = time - self.reservations[packet_id][1] - mu
         self.update_stats(loss,wait,mu)
-        vprint("Updating advance")
-        vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
-        vprint(f"Packet was received back at {time}")
-        vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
+        wait = max(0,wait)
+        #vprint("Updating advance")
+        #vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
+        #vprint(f"Packet was received back at {time}")
+        #vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
         self.newadvance(loss,wait)
-        vprint(f"New advance: {self.advance}")
+        #vprint(f"New advance: {self.advance}")
 
 class StrategicPlayer(Player):
 
@@ -148,12 +149,12 @@ class StrategicPlayer(Player):
         loss = 1-state
         wait = time - self.reservations[packet_id][1] - mu
         self.update_stats(loss,wait,mu)
-        vprint("Updating advance")
-        vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
-        vprint(f"Packet was received back at {time}")
-        vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
+        #vprint("Updating advance")
+        #vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
+        #vprint(f"Packet was received back at {time}")
+        #vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
         self.newadvance(loss,wait)
-        vprint(f"New advance: {self.advance}")
+        #vprint(f"New advance: {self.advance}")
 
 random1 = RandomPlayer()
 alpha0 = StrategicPlayerAlpha("Alpha0",1)
