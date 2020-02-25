@@ -11,7 +11,7 @@ class Player:
     advance = 0 #How long in advance the player will reserve
     arrival_times = [] #List of real arrival times of all packets
     revelation = [] #List of revelation times for the packets
-    reservations = {} #Dictionnary of reservation times of the player
+    reservations = {} #Dictionnary of reservation times of the player 
     total_loss = 0 #Total packets lost by the player
     total_waiting_time = 0 #The total waiting time of the player
     processed = 0 #Number of packets processed
@@ -45,18 +45,8 @@ class Player:
         @param ar_time: the arrival time of the packet
         @return: the reservation time for the packet
         """
-        raise Exception("Not implemented")
-
-    def treated(self,state,packet_id,time,mu):
-        """
-        @brief: Updates the parameters after a packet has been processed
-        @param state: 1 if the packet have been successfully processed, 0 if the packet have been lost
-        @param packet_id: The id of the processed packet
-        @param time: The time when the packet have been processed
-        @param mu: the parameter mu of the server
-        @return: 
-        """
-        raise Exception("Not implemented")
+        self.reservations[j] = (max(time,ar_time-self.advance),ar_time)
+        return self.reservations[j][0]
 
     def update_stats(self,loss,wait,mu):
         # The packet as lost
@@ -68,6 +58,25 @@ class Player:
             self.processed += 1
             #self.alpha = self.initial_alpha
             self.total_waiting_time += wait+mu
+    
+    def treated(self,state,packet_id,time,mu):
+        """
+        @brief: Updates the parameters after a packet has been processed
+        @param state: 1 if the packet have been successfully processed, 0 if the packet have been lost
+        @param packet_id: The id of the processed packet
+        @param time: The time when the packet have been processed
+        @param mu: the parameter mu of the server
+        @return: 
+        """
+        loss = 1-state
+        wait = time - self.reservations[packet_id][1] - mu
+        self.update_stats(loss,wait,mu)
+        #vprint("Updating advance")
+        #vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
+        #vprint(f"Packet was received back at {time}")
+        #vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
+        self.newadvance(loss,wait)
+        #vprint(f"New advance: {self.advance}")
 
 class RandomPlayer(Player):
 
@@ -76,16 +85,8 @@ class RandomPlayer(Player):
         self.reservations = {}
 
     def newadvance(self,loss,wait):
-        return np.random.random()
-
-    def reserve(self,time,ar_time,j):
-        self.advance = (ar_time-time)*np.random.random()
-        self.reservations[j] = ((time+self.advance,ar_time))
-        return self.reservations[j][0]
-    
-    def treated(self,state,packet_id,time,mu):
-        wait = time - self.reservations[packet_id][1] - mu
-        self.update_stats(1-state,wait,mu)
+        self.advance = np.random.random()
+        
 
 class CarefulPlayer(Player):
 
@@ -96,14 +97,6 @@ class CarefulPlayer(Player):
     def newadvance(self,loss,wait):
         return 0
 
-    def reserve(self,time,ar_time,j):
-        self.reservations[j] = (ar_time,ar_time)
-        return self.reservations[j][0]
-    
-    def treated(self,state,packet_id,time,mu):
-        wait = time - self.reservations[packet_id][1] - mu
-        self.update_stats(1-state,wait,mu)
-
 class StrategicPlayerAlpha(Player):
 
     def __init__(self,name,alpha):
@@ -112,23 +105,8 @@ class StrategicPlayerAlpha(Player):
         self.reservations = {}
 
     def newadvance(self,loss,wait):
-        self.advance = max(0,self.advance+wait-self.alpha*loss)
-
-    def reserve(self,time,ar_time,j):
-        self.reservations[j] = (max(time,ar_time-self.advance),ar_time)
-        return self.reservations[j][0]
-    
-    def treated(self,state,packet_id,time,mu):
-        loss = 1-state
-        wait = time - self.reservations[packet_id][1] - mu
-        self.update_stats(loss,wait,mu)
         wait = max(0,wait)
-        #vprint("Updating advance")
-        #vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
-        #vprint(f"Packet was received back at {time}")
-        #vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
-        self.newadvance(loss,wait)
-        #vprint(f"New advance: {self.advance}")
+        self.advance = max(0,self.advance+wait-self.alpha*loss)
 
 class StrategicPlayer(Player):
 
@@ -140,22 +118,7 @@ class StrategicPlayer(Player):
     def newadvance(self,loss,wait):
         self.wmax = max(wait,self.wmax)
         self.advance = max(0,self.advance+wait/self.wmax)
-
-    def reserve(self,time,ar_time,j):
-        self.reservations[j] = (max(time,ar_time-self.advance),ar_time)
-        return self.reservations[j][0]
     
-    def treated(self,state,packet_id,time,mu):
-        loss = 1-state
-        wait = time - self.reservations[packet_id][1] - mu
-        self.update_stats(loss,wait,mu)
-        #vprint("Updating advance")
-        #vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
-        #vprint(f"Packet was received back at {time}")
-        #vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
-        self.newadvance(loss,wait)
-        #vprint(f"New advance: {self.advance}")
-
 class MixedAlphaPlayer(Player):
 
     def __init__(self,name,alpha):
@@ -167,21 +130,6 @@ class MixedAlphaPlayer(Player):
     def newadvance(self,loss,wait):
         self.wmax = max(wait,self.wmax)
         self.advance = max(0,self.advance+wait/self.wmax-self.alpha*loss)
-
-    def reserve(self,time,ar_time,j):
-        self.reservations[j] = (max(time,ar_time-self.advance),ar_time)
-        return self.reservations[j][0]
-    
-    def treated(self,state,packet_id,time,mu):
-        loss = 1-state
-        wait = time - self.reservations[packet_id][1] - mu
-        self.update_stats(loss,wait,mu)
-        #vprint("Updating advance")
-        #vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
-        #vprint(f"Packet was received back at {time}")
-        #vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
-        self.newadvance(loss,wait)
-        #vprint(f"New advance: {self.advance}")
 
 random1 = RandomPlayer()
 mixal0 = MixedAlphaPlayer("MixAlpha0",1)
