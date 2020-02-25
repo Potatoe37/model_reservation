@@ -50,6 +50,7 @@ class Game:
         @param mu: the parameter mu of the game (mean treatment time of a packet by the server) (default lbda/number of players)
         @return: Object Game
         """
+        self.new = True #The game haven't started yet
         self.initial_size = initial_size #The number of packets already created
         self.players = [deepcopy(p) for p in players]  #The list of players playing the game
         self.n_players = len(players) #The number of players
@@ -211,8 +212,10 @@ class Game:
     def game(self,plot=False,duration=100000):
         self.totttt = tt.time()
         i=0
-        f = open("data.txt",mode='w')
-        f.close()
+        if self.new:
+            f = open("data.txt",mode='w')
+            f.close()
+        self.new = False
         while self.time<duration:
             ttt = tt.time()
             if self.time==-1:

@@ -131,6 +131,36 @@ class MixedAlphaPlayer(Player):
         self.wmax = max(wait,self.wmax)
         self.advance = max(0,self.advance+wait/self.wmax-self.alpha*loss)
 
+class LearningMyopic(Player):
+
+    def __init__(self, name):
+        self.name = "LearnerMyopic"
+        self.reservations = {}
+        self.beta = 0.8
+
+    def newadvance(self, loss, wait):
+        if wait >0:
+            self.advance = self.advance + self.beta*wait
+        else:
+            self.advance = self.advance / 2
+            self.beta *= 0.9
+
+
+
+class LearningAverage(Player):
+
+    def __init__(self, name):
+        self.name = "LearnerAverage"
+        self.reservations = {}
+        self.alpha = 100
+        self.weightedWait = 0
+        self.weightedLoss = 0
+
+    def newadvance(self, loss, wait):
+        self.weightedWait = 0.9*wait + 0.1*self.weightedWait
+        self.weightedLoss = 0.9*loss + 0.1*self.weightedLoss
+        self.advance = self.advance + self.weightedWait - self.alpha*self.weightedLoss
+
 random1 = RandomPlayer()
 mixal0 = MixedAlphaPlayer("MixAlpha0",1)
 mixal1 = MixedAlphaPlayer("MixAlpha1",10)
@@ -142,3 +172,5 @@ alpha2 = StrategicPlayerAlpha("Alpha2",100)
 alpha3 = StrategicPlayerAlpha("Alpha3",1000)
 strat1 = StrategicPlayer("Boss1")
 caref1 = CarefulPlayer()
+myopic = LearningMyopic("")
+average = LearningAverage("")
