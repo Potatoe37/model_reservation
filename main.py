@@ -135,7 +135,7 @@ class Game:
         self.y[player_i][2].append(self.y[player_i][2][-1]+loss)
         self.y[player_i][3].append(self.time)
         f = open("data.txt",mode="a")
-        f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\t{loss}\n")
+        f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\t{self.players[player_i].advance}\t{loss}\n")
         f.close()
 
     def turn(self):
