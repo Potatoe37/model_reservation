@@ -50,6 +50,7 @@ class Game:
         @param mu: the parameter mu of the game (mean treatment time of a packet by the server) (default lbda/number of players)
         @return: Object Game
         """
+        np.random.seed(0)
         self.new = True #The game haven't started yet
         self.initial_size = initial_size #The number of packets already created
         self.players = [deepcopy(p) for p in players]  #The list of players playing the game
@@ -96,10 +97,12 @@ class Game:
         self.arrival_times = ar #List of the lists of the first 'initial_size' arrival times for all players
         self.last_arrival = [max(self.arrival_times[i].values()) for i in range(self.n_players)] #List of the last arrival time for each player (not to look for the max at every update)
         self.revelation = rev #List of the lists of the first 'initial_size' revelation times for all players
-        self.reservations = [{} for j in range(self.n_players)] #List of the lists of the first 'initial_size' reservation times for all players (-1 if no reservation yet)
-        for j in range(self.n_players):
-            for i in range(initial_size):
-                self.reservations[j][i] = -1
+        self.reservations = [{} for i in range(self.n_players)] #List of the lists of the first 'initial_size' reservation times for all players (-1 if no reservation yet)
+        for i in range(self.n_players):
+            for j in range(initial_size):
+                self.reservations[i][j] = -1
+        #for i in range(self.n_players):
+        #    self.players[i].reservations = self.reservations[i]
         self.packets = [] #The file of packets to treat (i,j,t,delta) for player i packet j, arriv time t, treatment time delta
         self.treatment = -1 #The remaining treatement time
         self.y = [[[0] for i in range(4)] for i in range(self.n_players)] #For plot
@@ -167,10 +170,15 @@ class Game:
                 #vprint(f"Packet ({i},{j}) next in the file. Arrival time: {t}, current time: {self.time}")
                 while self.packets!=[] and t > self.time:
                     #vprint(f"The packet is not arrived yet, packet lost")
-                    self.players[i].treated(0,j,self.time,self.mu)
+                    newres = self.players[i].treated(0,j,self.time,self.mu)
                     self.add_plot(i,j,t,1) #For plotting
                     self.update(i,j) #Replacing the packet
                     self.packets.pop(0)
+                    for j in newres: #Updating reservation (can be done more efficiently)
+                        if self.reservations[i][j] != newres[j][0]:
+                            self.event_times.pop(self.event_times.index((self.reservations[i][j],1,i,j)))
+                            self.reservations[i][j] = newres[j][0]
+                            self.insert_event((newres[j][0],1,i,j))
                     if self.packets!=[]:
                         i,j,t,delta = self.packets[0]
                         #vprint(f"Packet ({i},{j}) next in the file. Arrival time: {t}, current time: {self.time}")
@@ -183,18 +191,28 @@ class Game:
             if self.packets!=[]:
                 i,j,t,delta = self.packets.pop(0)
                 #vprint(f"Packet ({i},{j}) treated.")
-                self.players[i].treated(1,j,self.time,self.mu) # Inform the player his packet have been treated
+                newres = self.players[i].treated(1,j,self.time,self.mu) # Inform the player his packet have been treated
                 self.add_plot(i,j,t,0) 
                 self.update(i,j)
+                for j in newres: #Updating reservation (can be done more efficiently)
+                    if self.reservations[i][j] != newres[j][0]:
+                        self.event_times.pop(self.event_times.index((self.reservations[i][j],1,i,j)))
+                        self.reservations[i][j] = newres[j][0]
+                        self.insert_event((newres[j][0],1,i,j))
                 # Prise en charge d'un nouveau packet
                 if self.packets!=[]:
                     i,j,t,delta = self.packets[0]
                     #vprint(f"Packet ({i},{j}) next in the file. Arrival time: {t}, current time: {self.time}")
                     while self.packets!=[] and t > self.time:
                         #vprint(f"The packet is not arrived yet, packet lost")
-                        self.players[i].treated(0,j,self.time,self.mu)
+                        newres = self.players[i].treated(0,j,self.time,self.mu)
                         self.add_plot(i,j,t,1)
                         self.update(i,j)
+                        for j in newres: #Updating reservation (can be done more efficiently)
+                            if self.reservations[i][j] != newres[j][0]:
+                                self.event_times.pop(self.event_times.index((self.reservations[i][j],1,i,j)))
+                                self.reservations[i][j] = newres[j][0]
+                                self.insert_event((newres[j][0],1,i,j))
                         self.packets.pop(0)
                         if self.packets!=[]:
                             i,j,t,delta = self.packets[0]
@@ -233,6 +251,7 @@ class Game:
             #vprint(f"Arrival Times: {self.arrival_times}")
             ##vprint(f"Last Arrival {self.last_arrival}")
             #vprint(f"Reservation Times: {self.reservations}")
+            #vprint(f"Player1 res times: {self.players[1].reservations}")
             #vprint("")
             self.othttt+= tt.time()-ttt
             self.turn()

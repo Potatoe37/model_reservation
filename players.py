@@ -76,7 +76,12 @@ class Player:
         #vprint(f"Packet was received back at {time}")
         #vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
         self.newadvance(loss,wait)
+        self.reservations[packet_id] = (-1,-1)
+        for j in self.reservations:
+            if self.reservations[j][0]>time:
+                self.reserve(time,self.reservations[j][1],j)
         #vprint(f"New advance: {self.advance}")
+        return self.reservations
 
 class RandomPlayer(Player):
 
@@ -145,8 +150,6 @@ class LearningMyopic(Player):
             self.advance = self.advance / 2
             self.beta *= 0.9
 
-
-
 class LearningAverage(Player):
 
     def __init__(self, name):
@@ -159,7 +162,7 @@ class LearningAverage(Player):
     def newadvance(self, loss, wait):
         self.weightedWait = 0.9*wait + 0.1*self.weightedWait
         self.weightedLoss = 0.9*loss + 0.1*self.weightedLoss
-        self.advance = self.advance + self.weightedWait - self.alpha*self.weightedLoss
+        self.advance = max(0,self.advance + self.weightedWait - self.alpha*self.weightedLoss)
 
 random1 = RandomPlayer()
 mixal0 = MixedAlphaPlayer("MixAlpha0",1)
