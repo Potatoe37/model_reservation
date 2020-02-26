@@ -148,7 +148,7 @@ class LearningMyopic(Player):
             self.advance = self.advance + self.beta*wait
         else:
             self.advance = max(0,self.advance / 2-0.1)
-            self.beta *= 0.9
+            #self.beta *= 0.9
 
 class LearningAverage(Player):
 
