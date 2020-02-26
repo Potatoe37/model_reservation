@@ -170,8 +170,8 @@ class Game:
                 #vprint(f"Packet ({i},{j}) next in the file. Arrival time: {t}, current time: {self.time}")
                 while self.packets!=[] and t > self.time:
                     #vprint(f"The packet is not arrived yet, packet lost")
-                    newres = self.players[i].treated(0,j,self.time,self.mu)
                     self.add_plot(i,j,t,1) #For plotting
+                    newres = self.players[i].treated(0,j,self.time,self.mu)
                     self.update(i,j) #Replacing the packet
                     self.packets.pop(0)
                     for j in newres: #Updating reservation (can be done more efficiently)
@@ -191,8 +191,8 @@ class Game:
             if self.packets!=[]:
                 i,j,t,delta = self.packets.pop(0)
                 #vprint(f"Packet ({i},{j}) treated.")
-                newres = self.players[i].treated(1,j,self.time,self.mu) # Inform the player his packet have been treated
                 self.add_plot(i,j,t,0) 
+                newres = self.players[i].treated(1,j,self.time,self.mu) # Inform the player his packet have been treated
                 self.update(i,j)
                 for j in newres: #Updating reservation (can be done more efficiently)
                     if self.reservations[i][j] != newres[j][0]:
@@ -205,8 +205,8 @@ class Game:
                     #vprint(f"Packet ({i},{j}) next in the file. Arrival time: {t}, current time: {self.time}")
                     while self.packets!=[] and t > self.time:
                         #vprint(f"The packet is not arrived yet, packet lost")
-                        newres = self.players[i].treated(0,j,self.time,self.mu)
                         self.add_plot(i,j,t,1)
+                        newres = self.players[i].treated(0,j,self.time,self.mu)
                         self.update(i,j)
                         for j in newres: #Updating reservation (can be done more efficiently)
                             if self.reservations[i][j] != newres[j][0]:

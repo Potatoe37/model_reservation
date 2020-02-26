@@ -147,7 +147,7 @@ class LearningMyopic(Player):
         if wait >0:
             self.advance = self.advance + self.beta*wait
         else:
-            self.advance = self.advance / 2
+            self.advance = max(0,self.advance / 2-0.1)
             self.beta *= 0.9
 
 class LearningAverage(Player):
@@ -160,8 +160,8 @@ class LearningAverage(Player):
         self.weightedLoss = 0
 
     def newadvance(self, loss, wait):
-        self.weightedWait = 0.9*wait + 0.1*self.weightedWait
-        self.weightedLoss = 0.9*loss + 0.1*self.weightedLoss
+        self.weightedWait = 0.1*wait + 0.9*self.weightedWait
+        self.weightedLoss = 0.1*loss + 0.9*self.weightedLoss
         self.advance = max(0,self.advance + self.weightedWait - self.alpha*self.weightedLoss)
 
 random1 = RandomPlayer()
