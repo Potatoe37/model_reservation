@@ -11,7 +11,8 @@ class Player:
     advance = 0 #How long in advance the player will reserve
     arrival_times = [] #List of real arrival times of all packets
     revelation = [] #List of revelation times for the packets
-    reservations = {} #Dictionnary of reservation times of the player 
+    reservations = {} #Dictionnary of reservation times of the player (res_time,ar_time)
+    advances = {} #Dictionnary of advances used for each packet (!=ar_time-res_time)
     total_loss = 0 #Total packets lost by the player
     total_waiting_time = 0 #The total waiting time of the player
     processed = 0 #Number of packets processed
@@ -29,7 +30,7 @@ class Player:
         """
         return time+np.random.exponential(self.lbda)
 
-    def newadvance(self,loss,wait):
+    def newadvance(self,loss,wait,advance):
         """
         @brief: Computes the new advance for teh player
         @param loss: The total loss as far back as the player can remember
@@ -46,6 +47,7 @@ class Player:
         @return: the reservation time for the packet
         """
         self.reservations[j] = (max(time,ar_time-self.advance),ar_time)
+        self.advances[j] = self.advance 
         return self.reservations[j][0]
 
     def update_stats(self,loss,wait,mu):
@@ -70,12 +72,13 @@ class Player:
         """
         loss = 1-state
         wait = time - self.reservations[packet_id][1] - mu
+        advance = self.advances[packet_id]
         self.update_stats(loss,wait,mu)
         #vprint("Updating advance")
         #vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
         #vprint(f"Packet was received back at {time}")
         #vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
-        self.newadvance(loss,wait)
+        self.newadvance(loss,wait,advance)
         self.reservations[packet_id] = (-1,-1)
         for j in self.reservations:
             if self.reservations[j][0]>time:
@@ -89,7 +92,7 @@ class RandomPlayer(Player):
         self.name = "Random" 
         self.reservations = {}
 
-    def newadvance(self,loss,wait):
+    def newadvance(self,loss,wait,advance):
         self.advance = np.random.random()
         
 
@@ -99,7 +102,7 @@ class CarefulPlayer(Player):
         self.name = "Careful" 
         self.reservations = {}
 
-    def newadvance(self,loss,wait):
+    def newadvance(self,loss,wait,advance):
         return 0
 
 class StrategicPlayerAlpha(Player):
@@ -109,9 +112,9 @@ class StrategicPlayerAlpha(Player):
         self.alpha = alpha
         self.reservations = {}
 
-    def newadvance(self,loss,wait):
+    def newadvance(self,loss,wait,advance):
         wait = max(0,wait)
-        self.advance = max(0,self.advance+wait-self.alpha*loss)
+        self.advance = max(0,advance+wait-self.alpha*loss)
 
 class StrategicPlayer(Player):
 
@@ -120,7 +123,7 @@ class StrategicPlayer(Player):
         self.reservations = {}
         self.wmax = 1
 
-    def newadvance(self,loss,wait):
+    def newadvance(self,loss,wait,advance):
         self.wmax = max(wait,self.wmax)
         self.advance = max(0,self.advance+wait/self.wmax)
     
@@ -132,7 +135,7 @@ class MixedAlphaPlayer(Player):
         self.wmax = 1
         self.alpha = alpha
 
-    def newadvance(self,loss,wait):
+    def newadvance(self,loss,wait,advance):
         self.wmax = max(wait,self.wmax)
         self.advance = max(0,self.advance+wait/self.wmax-self.alpha*loss)
 
@@ -143,7 +146,7 @@ class LearningMyopic(Player):
         self.reservations = {}
         self.beta = 0.8
 
-    def newadvance(self, loss, wait):
+    def newadvance(self,loss,wait,advance):
         if wait >0:
             self.advance = self.advance + self.beta*wait
         else:
@@ -159,7 +162,7 @@ class LearningAverage(Player):
         self.weightedWait = 0
         self.weightedLoss = 0
 
-    def newadvance(self, loss, wait):
+    def newadvance(self,loss,wait,advance):
         self.weightedWait = 0.1*wait + 0.9*self.weightedWait
         self.weightedLoss = 0.1*loss + 0.9*self.weightedLoss
         self.advance = max(0,self.advance + self.weightedWait - self.alpha*self.weightedLoss)
