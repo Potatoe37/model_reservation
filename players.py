@@ -12,7 +12,6 @@ class Player:
     arrival_times = [] #List of real arrival times of all packets
     revelation = [] #List of revelation times for the packets
     reservations = {} #Dictionnary of reservation times of the player (res_time,ar_time)
-    advances = {} #Dictionnary of advances used for each packet (!=ar_time-res_time)
     total_loss = 0 #Total packets lost by the player
     total_waiting_time = 0 #The total waiting time of the player
     processed = 0 #Number of packets processed
@@ -47,7 +46,6 @@ class Player:
         @return: the reservation time for the packet
         """
         self.reservations[j] = (max(time,ar_time-self.advance),ar_time)
-        self.advances[j] = self.advance 
         return self.reservations[j][0]
 
     def update_stats(self,loss,wait,mu):
@@ -72,7 +70,7 @@ class Player:
         """
         loss = 1-state
         wait = time - self.reservations[packet_id][1] - mu
-        advance = self.advances[packet_id]
+        advance = self.reservations[packet_id][1]-self.reservations[packet_id][0]
         self.update_stats(loss,wait,mu)
         #vprint("Updating advance")
         #vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
