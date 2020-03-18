@@ -20,26 +20,7 @@ class Game:
         ttt = tt.time()
         bisect.insort(self.event_times,event)
         self.insttt += tt.time()-ttt
-        return 0 
-        ttt = tt.time()
-        self.event_times.append((10000000000,3,10000,10000))
-        tmp1 = event
-        tmp2 = 0
-        place_founded = False
-        i = 0
-        while i < len(self.event_times):
-            if (not place_founded) and event <= self.event_times[i]:
-                place_founded = True
-                if event == self.event_times[i]:
-                    self.event_times.pop(-1)
-                    ValueError("Impossible to insert event, already in list")
-                    break
-            if place_founded:
-                tmp2 = self.event_times[i]
-                self.event_times[i] = tmp1
-                tmp1 = tmp2
-            i+=1
-        self.insttt += tt.time()-ttt
+        return 0
 
     def __init__(self,players,lbda,initial_size=50,mu=0):
         """
@@ -55,6 +36,9 @@ class Game:
         self.initial_size = initial_size #The number of packets already created
         self.players = [deepcopy(p) for p in players]  #The list of players playing the game
         self.n_players = len(players) #The number of players
+        #Giving mu to every player
+        for p in self.players:
+            p.n_players = self.n_players
         self.lbda = lbda #The lambda of the game (mean arrival time for the players)
         if self.lbda!=0:
             #Same lambda for every player
@@ -67,7 +51,16 @@ class Game:
             self.mu = sum([self.players[i].lbda for i in range(self.n_players)])/self.n_players/self.n_players #The mu of the game
         else:
             self.mu = mu #The mean treatment times of the packets
+        #Giving mu to every player
+        for p in self.players:
+            p.mu = self.mu
+            print(p,p.mu)
         print(f"mu={self.mu}")
+        if self.mu<self.lbda/self.n_players:
+            self.theoretical_wait = 1/(1/self.mu-self.n_players/self.lbda)
+        else:
+            self.theoretical_wait = 'inf'
+        print(f"Theoretical mean wait: {self.theoretical_wait}")
         def initialisation(n_players,lbda,initial_size=50):
             """
             @brief: Creates the initail lists of arrival times and revelation times of each players
@@ -138,9 +131,10 @@ class Game:
         self.y[player_i][1].append(self.y[player_i][1][-1]+max(0,self.time-ar_time))
         self.y[player_i][2].append(self.y[player_i][2][-1]+loss)
         self.y[player_i][3].append(self.time)
-        f = open("data.txt",mode="a")
-        f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\t{self.players[player_i].advance}\t{loss}\n")
-        f.close()
+        if loss==0:
+            f = open("data.txt",mode="a")
+            f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\t{self.players[player_i].advance}\t{loss}\n")
+            f.close()
 
     def turn(self):
         # Reavealing arrival time to clients
@@ -191,6 +185,7 @@ class Game:
             if self.packets!=[]:
                 i,j,t,delta = self.packets.pop(0)
                 #vprint(f"Packet ({i},{j}) treated.")
+                self.treatment = -1
                 self.add_plot(i,j,t,0) 
                 newres = self.players[i].treated(1,j,self.time,self.mu) # Inform the player his packet have been treated
                 self.update(i,j)
@@ -232,6 +227,7 @@ class Game:
         i=0
         if self.new:
             f = open("data.txt",mode='w')
+            f.write("ArTime\tResTime\tRetTime\tP\tAdv\tL\n")
             f.close()
         self.new = False
         while self.time<duration:
@@ -244,14 +240,14 @@ class Game:
                 print(f"N PACKETS : {len(self.packets)}")
                 i = int(self.time/duration*20)
             #vprint(f"Time: {self.time}")
-            #vprint(f"Event times: {self.event_times}")
+            ##vprint(f"Event times: {self.event_times}")
             #vprint(f"Remaining treatment time: {self.treatment-self.time}")
             #vprint(f"Packets: {self.packets}")
-            #vprint(f"Revelation Times: {self.revelation}")
-            #vprint(f"Arrival Times: {self.arrival_times}")
+            ##vprint(f"Revelation Times: {self.revelation}")
+            ##vprint(f"Arrival Times: {self.arrival_times}")
             ##vprint(f"Last Arrival {self.last_arrival}")
-            #vprint(f"Reservation Times: {self.reservations}")
-            #vprint(f"Player1 res times: {self.players[1].reservations}")
+            ##vprint(f"Reservation Times: {self.reservations}")
+            ##vprint(f"Player1 res times: {self.players[1].reservations}")
             #vprint("")
             self.othttt+= tt.time()-ttt
             self.turn()
@@ -265,11 +261,12 @@ class Game:
             #    input()
             self.othttt2 += tt.time()-ttt
         self.totttt = tt.time() - self.totttt
+        print(f"\nTheoretical mean wait: {self.theoretical_wait}\n")
         if plot:
             ppm.plotTime(np.array(self.times),np.array(self.tota),"Total Advance")
         for i in range(self.n_players):
             if plot:
                 #ppm.plotXY(np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
                 ppm.plotXYTime(np.array(self.y[i][3]),np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
-            print(f"Player {i+1} ({self.players[i].name}):\n - Total packets processed: {self.players[i].processed}\n - Total packets lost: {self.players[i].total_loss}\n - Total waiting time: {self.players[i].total_waiting_time}\n - Final advance: {self.players[i].advance}\n")
+            print(f"Player {i+1} ({self.players[i].name}):\n - Total packets processed: {self.players[i].processed}\n - Total packets lost: {self.players[i].total_loss}\n - Total waiting time: {self.players[i].total_waiting_time}\n - Mean waiting time: {self.players[i].total_waiting_time/self.players[i].processed}\n - Final advance: {self.players[i].advance}\n")
         print(f"TTT:\n - Revelation: {self.revttt}s\n - Reservation: {self.resttt}s\n - Treatment: {self.trettt}s\n - Insertion: {self.insttt}s\n - Others: {self.othttt}s\n - Others2: {self.othttt2}s\n - Total: {self.totttt}s") 

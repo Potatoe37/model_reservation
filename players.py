@@ -4,14 +4,17 @@ from functions import vprint
 
 class Player:
     name = "" #The name of the player
-    nu = 50 #The nu of the player
+    nu = 500 #The nu of the player
     lbda = 50 #The lambda of the player
+    mu = 1 #The mu of the game
+    n_players = 1 #The number of players of the game
     alpha = 50 #The factor alpha of the player
     initial_alpha = 50
     advance = 0 #How long in advance the player will reserve
     arrival_times = [] #List of real arrival times of all packets
     revelation = [] #List of revelation times for the packets
     reservations = {} #Dictionnary of reservation times of the player (res_time,ar_time)
+    advances = {} #Dictionnary of the advances at the time of the reservation for each packet
     total_loss = 0 #Total packets lost by the player
     total_waiting_time = 0 #The total waiting time of the player
     processed = 0 #Number of packets processed
@@ -25,11 +28,11 @@ class Player:
         """
         @brief: 
         @param time: The last packet arrival time
-        @return: The nex packet arrival time
+        @return: The next packet arrival time
         """
         return time+np.random.exponential(self.lbda)
 
-    def newadvance(self,loss,wait,advance):
+    def newadvance(self,loss,wait,used_advance,param_advance):
         """
         @brief: Computes the new advance for teh player
         @param loss: The total loss as far back as the player can remember
@@ -46,9 +49,10 @@ class Player:
         @return: the reservation time for the packet
         """
         self.reservations[j] = (max(time,ar_time-self.advance),ar_time)
+        self.advances[j] = self.advance
         return self.reservations[j][0]
 
-    def update_stats(self,loss,wait,mu):
+    def update_stats(self,loss,wait):
         # The packet as lost
         if loss==1:
             #self.alpha *= 2
@@ -57,7 +61,7 @@ class Player:
         else:
             self.processed += 1
             #self.alpha = self.initial_alpha
-            self.total_waiting_time += wait+mu
+            self.total_waiting_time += wait
     
     def treated(self,state,packet_id,time,mu):
         """
@@ -69,14 +73,15 @@ class Player:
         @return: 
         """
         loss = 1-state
-        wait = time - self.reservations[packet_id][1] - mu
-        advance = self.reservations[packet_id][1]-self.reservations[packet_id][0]
-        self.update_stats(loss,wait,mu)
+        wait = time - self.reservations[packet_id][1]
+        used_advance = self.reservations[packet_id][1]-self.reservations[packet_id][0]
+        param_advance = self.advances[packet_id]
+        self.update_stats(loss,wait)
         #vprint("Updating advance")
         #vprint(f"Packet was sent at {self.reservations[packet_id][0]}, arriving at {self.reservations[packet_id][1]}")
         #vprint(f"Packet was received back at {time}")
         #vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
-        self.newadvance(loss,wait,advance)
+        self.newadvance(loss,wait,used_advance,param_advance)
         self.reservations[packet_id] = (-1,-1)
         for j in self.reservations:
             if self.reservations[j][0]>time:
@@ -90,7 +95,7 @@ class RandomPlayer(Player):
         self.name = "Random" 
         self.reservations = {}
 
-    def newadvance(self,loss,wait,advance):
+    def newadvance(self,loss,wait,used_advance,param_advance):
         self.advance = np.random.random()
         
 
@@ -100,7 +105,7 @@ class CarefulPlayer(Player):
         self.name = "Careful" 
         self.reservations = {}
 
-    def newadvance(self,loss,wait,advance):
+    def newadvance(self,loss,wait,used_advance,param_advance):
         return 0
 
 class StrategicPlayerAlpha(Player):
@@ -110,20 +115,20 @@ class StrategicPlayerAlpha(Player):
         self.alpha = alpha
         self.reservations = {}
 
-    def newadvance(self,loss,wait,advance):
-        wait = max(0,wait)
-        self.advance = max(0,advance+wait-self.alpha*loss)
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        wait = max(0,wait-self.mu)
+        self.advance = max(0,used_advance+wait-self.alpha*loss)
 
 class StrategicPlayer(Player):
 
-    def __init__(self,name):
+    def __init__(self,name=""):
         self.name = "Strategic "+name
         self.reservations = {}
         self.wmax = 1
 
-    def newadvance(self,loss,wait,advance):
-        self.wmax = max(wait,self.wmax)
-        self.advance = max(0,self.advance+wait/self.wmax)
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        self.wmax = max(wait-self.mu,self.wmax)
+        self.advance = max(0,used_advance+(wait-self.mu)/self.wmax)
     
 class MixedAlphaPlayer(Player):
 
@@ -133,37 +138,172 @@ class MixedAlphaPlayer(Player):
         self.wmax = 1
         self.alpha = alpha
 
-    def newadvance(self,loss,wait,advance):
-        self.wmax = max(wait,self.wmax)
-        self.advance = max(0,self.advance+wait/self.wmax-self.alpha*loss)
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        self.wmax = max(wait-self.mu,self.wmax)
+        self.advance = max(0,used_advance+(wait-self.mu)/self.wmax-self.alpha*loss)
 
 class LearningMyopic(Player):
 
-    def __init__(self, name):
-        self.name = "LearnerMyopic"
+    def __init__(self, name=""):
+        self.name = "LearnerMyopic" + name
         self.reservations = {}
         self.beta = 0.8
 
-    def newadvance(self,loss,wait,advance):
+    def newadvance(self,loss,wait,used_advance,param_advance):
         if wait >0:
-            self.advance = self.advance + self.beta*wait
+            self.advance = self.advance + self.beta*(wait-self.mu)
         else:
             self.advance = max(0,self.advance / 2-0.1)
             #self.beta *= 0.9
 
 class LearningAverage(Player):
 
-    def __init__(self, name):
-        self.name = "LearnerAverage"
+    def __init__(self, name=""):
+        self.name = "LearnerAverage" + name
         self.reservations = {}
         self.alpha = 100
         self.weightedWait = 0
         self.weightedLoss = 0
 
-    def newadvance(self,loss,wait,advance):
-        self.weightedWait = 0.1*wait + 0.9*self.weightedWait
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        if loss==0:
+            self.weightedWait = 0.1*max(0,wait-self.mu) + 0.9*self.weightedWait
         self.weightedLoss = 0.1*loss + 0.9*self.weightedLoss
         self.advance = max(0,self.advance + self.weightedWait - self.alpha*self.weightedLoss)
+
+class LearningAverageBien(Player):
+
+    def __init__(self, name=""):
+        self.name = "LearnerAverageBien" + name
+        self.reservations = {}
+        self.advances = {}
+        self.alpha = 100
+        self.weightedWait = 0
+        self.weightedLoss = 0
+
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        if loss==0:
+            self.weightedWait = 0.1*(max(0,wait-self.mu)-(param_advance-used_advance)) + 0.9*self.weightedWait
+        self.weightedLoss = 0.1*loss + 0.9*self.weightedLoss
+        self.advance = max(0,self.advance + self.weightedWait - self.alpha*self.weightedLoss)
+
+class StupidLearner(Player):
+
+    def __init__(self,name=""):
+        self.name = "Stupid" + name
+        self.reservations = {}
+        self.packets = 1
+    
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        if loss==0:
+            self.advance += (np.exp(1/self.packets)-1)*100
+        else:
+            self.advance = max(0,self.advance-((np.exp(-(self.packets/100)))*100))
+        self.packets += 1
+
+class StupidSnail(Player):
+
+    def __init__(self,name=""):
+        self.name = "StupidSnail" + name
+        self.reservations = {}
+        self.packetspassed = 1
+        self.packetslost = 1
+    
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        if loss==0:
+            self.advance += 100/self.packetspassed
+            self.packetspassed+=1
+        else:
+            self.advance = max(0,self.advance-100/self.packetslost)
+            self.packetslost += 1
+
+class EvolvedLearner(Player):
+
+    def __init__(self,name=""):
+        self.name = "Evolved" + name
+        self.reservations = {}
+        self.packets = 1
+        self.weightedWait = 1
+    
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        if loss==0:
+            self.weightedWait = 0.1*max(0,wait-self.mu) + 0.9*self.weightedWait
+            self.advance += self.weightedWait*(np.exp(1/self.packets)-1)*100
+        else:
+            self.advance = max(0,self.advance-self.weightedWait*((np.exp(-(self.packets/100)))*100))
+        self.packets += 1
+
+class EvolvedSnail(Player):
+
+    def __init__(self,name=""):
+        self.name = "EvolvedSnail" + name
+        self.reservations = {}
+        self.packetspassed = 1
+        self.packetslost = 1
+        self.weightedWait = 1
+    
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        if loss==0:
+            self.weightedWait = 0.1*max(0,wait-self.mu) + 0.9*self.weightedWait
+            self.advance += self.weightedWait*100/self.packetspassed
+            self.packetspassed+=1
+        else:
+            self.advance = max(0,self.advance-self.weightedWait*100/self.packetslost)
+            self.packetslost += 1
+
+class DeterministicMean(Player):
+
+    def __init__(self, name=""):
+        self.name = "DeterministicMedium"+name
+        self.reservations = {}
+        self.advance = 0
+
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        if self.advance==0:
+            self.advance = 1/(1/self.mu-self.n_players/self.lbda)
+
+class StupidDeterministic(Player):
+
+    def __init__(self, advance, name=""):
+        self.name = "StupidDeterministic"+str(advance)+name
+        self.reservations = {}
+        self.advance = advance
+
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        return 0
+
+class SmartAnalyst(Player):
+
+    def __init__(self,prob_threshold,name=""):
+        self.name = "SmartAnalyst"+name
+        self.reservations = {}
+        self.threshold = 0
+        self.prob_threshold = prob_threshold
+        self.alpha = np.random.random()
+        self.testedalphas = {}
+        self.row = 0
+
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        if self.threshold==0:
+            self.threshold = -self.lbda*np.log(self.prob_threshold) #On recalcule après avoir obtenu le lambda du jeu
+        if loss==1:
+            self.advance=0
+            self.testedalphas[self.alpha] = self.row
+            self.row = 0
+            if len(self.testedalphas)<10:
+                self.alpha = np.random.random() 
+            else:
+                total=0
+                alpha=0
+                for a in self.testedalphas:
+                    total += self.testedalphas[a]
+                    alpha += a*self.testedalphas[a]
+                self.alpha = alpha/total
+        else:
+            self.row+=1
+            if wait>self.threshold:
+                self.advance+=self.alpha*wait
+
 
 random1 = RandomPlayer()
 mixal0 = MixedAlphaPlayer("MixAlpha0",1)
@@ -178,3 +318,17 @@ strat1 = StrategicPlayer("Boss1")
 caref1 = CarefulPlayer()
 myopic = LearningMyopic("")
 average = LearningAverage("")
+averageB = LearningAverageBien("")
+stupid = StupidLearner("")
+snail = StupidSnail("")
+evolearn = EvolvedLearner("")
+evosnail = EvolvedSnail("")
+detmean = DeterministicMean()
+stup1 = StupidDeterministic(1)
+stup2 = StupidDeterministic(2)
+stup3 = StupidDeterministic(3)
+stup4 = StupidDeterministic(4)
+stup5 = StupidDeterministic(5)
+stup6 = StupidDeterministic(6)
+stup7 = StupidDeterministic(7)
+analyst = SmartAnalyst(0.2)

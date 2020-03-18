@@ -1,8 +1,4 @@
-def poisson(lbda):
-    T = 0
-    return T
-
-verb = False
+verb = True
 stop = False
 
 def vprint(s):
