@@ -54,7 +54,6 @@ class Game:
         #Giving mu to every player
         for p in self.players:
             p.mu = self.mu
-            print(p,p.mu)
         print(f"mu={self.mu}")
         if self.mu<self.lbda/self.n_players:
             self.theoretical_wait = 1/(1/self.mu-self.n_players/self.lbda)
