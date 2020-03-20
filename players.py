@@ -24,6 +24,11 @@ class Player:
     advance_mean_mem = 0
     wmax = 1 #The maximum maiting time
 
+    def get_param(self,mu,lbda,n_players):
+        self.mu = mu
+        self.lbda = lbda
+        self.n_players = n_players
+
     def nexttime(self,time):
         """
         @brief: 
@@ -257,10 +262,15 @@ class DeterministicMean(Player):
         self.name = "DeterministicMedium"+name
         self.reservations = {}
         self.advance = 0
+    
+    def get_param(self,mu,lbda,n_players):
+        self.mu = mu
+        self.lbda = lbda
+        self.n_players = n_players
+        self.advance = 1/(1/self.mu-self.n_players/self.lbda)
 
     def newadvance(self,loss,wait,used_advance,param_advance):
-        if self.advance==0:
-            self.advance = 1/(1/self.mu-self.n_players/self.lbda)
+        return 0
 
 class StupidDeterministic(Player):
 
@@ -283,9 +293,13 @@ class SmartAnalyst(Player):
         self.testedalphas = {}
         self.row = 0
 
+    def get_param(self,mu,lbda,n_players):
+        self.mu = mu
+        self.lbda = lbda
+        self.n_players = n_players
+        self.threshold = -self.lbda*np.log(self.prob_threshold) #On recalcule après avoir obtenu le lambda du jeu
+
     def newadvance(self,loss,wait,used_advance,param_advance):
-        if self.threshold==0:
-            self.threshold = -self.lbda*np.log(self.prob_threshold) #On recalcule après avoir obtenu le lambda du jeu
         if loss==1:
             self.advance=0
             self.testedalphas[self.alpha] = self.row
@@ -304,6 +318,30 @@ class SmartAnalyst(Player):
             if wait>self.threshold:
                 self.advance+=self.alpha*wait
 
+class RandomAnalyst(Player):
+
+    def __init__(self,name=""):
+        self.name = "RandomAnalyst"+name
+        self.reservations = {}
+        self.pempty = 0
+    
+    def get_param(self,mu,lbda,n_players):
+        self.mu = mu
+        self.lbda = lbda
+        self.n_players = n_players
+        self.pempty = 1-mu/lbda
+
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        self.advance = (self.n_players*self.mu/self.lbda)/(1/self.mu-self.n_players/self.lbda) if np.random.random()>self.pempty else 0
+
+class Analyst(Player):
+
+    def __init__(self,name=""):
+        self.name = "Analyst"+name
+        self.reservations = {}
+
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        self.advance = (self.n_players*self.mu/self.lbda)/(1/self.mu-self.n_players/self.lbda) if loss==0 else 0
 
 random1 = RandomPlayer()
 mixal0 = MixedAlphaPlayer("MixAlpha0",1)
@@ -331,4 +369,6 @@ stup4 = StupidDeterministic(4)
 stup5 = StupidDeterministic(5)
 stup6 = StupidDeterministic(6)
 stup7 = StupidDeterministic(7)
-analyst = SmartAnalyst(0.2)
+smartanalyst = SmartAnalyst(0.2)
+randanalyst = RandomAnalyst()
+analyst = Analyst()

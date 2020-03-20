@@ -22,7 +22,7 @@ class Game:
         self.insttt += tt.time()-ttt
         return 0
 
-    def __init__(self,players,lbda,initial_size=50,mu=0):
+    def __init__(self,players,lbda,initial_size=500,mu=0):
         """
         @brief: Initialisation of the game
         @param players: list of participationg players
@@ -36,14 +36,7 @@ class Game:
         self.initial_size = initial_size #The number of packets already created
         self.players = [deepcopy(p) for p in players]  #The list of players playing the game
         self.n_players = len(players) #The number of players
-        #Giving mu to every player
-        for p in self.players:
-            p.n_players = self.n_players
-        self.lbda = lbda #The lambda of the game (mean arrival time for the players)
-        if self.lbda!=0:
-            #Same lambda for every player
-            for p in self.players:
-                p.lbda = lbda
+        self.lbda = lbda #The lambda of the game (mean arrival time for the players) #0 if different for each player
         self.event_times = [] #The list of times of next happening events (sorted), and, event type (0: revelation, 1: reservation, 2: treatment), player concerned, packet concerned
         self.event = (0,0,-1,-1)
         self.time = -1 #The time of the game
@@ -51,15 +44,18 @@ class Game:
             self.mu = sum([self.players[i].lbda for i in range(self.n_players)])/self.n_players/self.n_players #The mu of the game
         else:
             self.mu = mu #The mean treatment times of the packets
-        #Giving mu to every player
+        #Giving mu, lambda and the number of players to each player
         for p in self.players:
-            p.mu = self.mu
+            p.get_param(self.mu,self.lbda,self.n_players)
         print(f"mu={self.mu}")
         if self.mu<self.lbda/self.n_players:
-            self.theoretical_wait = 1/(1/self.mu-self.n_players/self.lbda)
+            self.theoretical_wait = (self.n_players*self.mu/self.lbda)/(1/self.mu-self.n_players/self.lbda)
+            self.theoretical_time_in_sys = 1/(1/self.mu-self.n_players/self.lbda)
         else:
             self.theoretical_wait = 'inf'
+            self.theoretical_time_in_sys = 'inf'
         print(f"Theoretical mean wait: {self.theoretical_wait}")
+        print(f"Theoretical mean time in sys: {self.theoretical_time_in_sys}")
         def initialisation(n_players,lbda,initial_size=50):
             """
             @brief: Creates the initail lists of arrival times and revelation times of each players
@@ -130,10 +126,9 @@ class Game:
         self.y[player_i][1].append(self.y[player_i][1][-1]+max(0,self.time-ar_time))
         self.y[player_i][2].append(self.y[player_i][2][-1]+loss)
         self.y[player_i][3].append(self.time)
-        if loss==0:
-            f = open("data.txt",mode="a")
-            f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\t{self.players[player_i].advance}\t{loss}\n")
-            f.close()
+        f = open("data.txt",mode="a")
+        f.write(f"{ar_time}\t{self.players[player_i].reservations[packet_id][0]}\t{self.time}\t{player_i}\t{ar_time-self.players[player_i].reservations[packet_id][0]}\t{loss}\n")
+        f.close()
 
     def turn(self):
         # Reavealing arrival time to clients
@@ -167,7 +162,8 @@ class Game:
                     newres = self.players[i].treated(0,j,self.time,self.mu)
                     self.update(i,j) #Replacing the packet
                     self.packets.pop(0)
-                    for j in newres: #Updating reservation (can be done more efficiently)
+                    #Updating reservation (can be done more efficiently)
+                    for j in newres: 
                         if self.reservations[i][j] != newres[j][0]:
                             self.event_times.pop(self.event_times.index((self.reservations[i][j],1,i,j)))
                             self.reservations[i][j] = newres[j][0]
@@ -188,7 +184,8 @@ class Game:
                 self.add_plot(i,j,t,0) 
                 newres = self.players[i].treated(1,j,self.time,self.mu) # Inform the player his packet have been treated
                 self.update(i,j)
-                for j in newres: #Updating reservation (can be done more efficiently)
+                #Updating reservation (can be done more efficiently)
+                for j in newres: 
                     if self.reservations[i][j] != newres[j][0]:
                         self.event_times.pop(self.event_times.index((self.reservations[i][j],1,i,j)))
                         self.reservations[i][j] = newres[j][0]
@@ -202,7 +199,8 @@ class Game:
                         self.add_plot(i,j,t,1)
                         newres = self.players[i].treated(0,j,self.time,self.mu)
                         self.update(i,j)
-                        for j in newres: #Updating reservation (can be done more efficiently)
+                        #Updating reservation (can be done more efficiently)
+                        for j in newres: 
                             if self.reservations[i][j] != newres[j][0]:
                                 self.event_times.pop(self.event_times.index((self.reservations[i][j],1,i,j)))
                                 self.reservations[i][j] = newres[j][0]
@@ -260,7 +258,8 @@ class Game:
             #    input()
             self.othttt2 += tt.time()-ttt
         self.totttt = tt.time() - self.totttt
-        print(f"\nTheoretical mean wait: {self.theoretical_wait}\n")
+        print(f"\nTheoretical mean wait: {self.theoretical_wait}")
+        print(f"Theoretical mean time in sys: {self.theoretical_time_in_sys}\n")
         if plot:
             ppm.plotTime(np.array(self.times),np.array(self.tota),"Total Advance")
         for i in range(self.n_players):
