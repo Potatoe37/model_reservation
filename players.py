@@ -26,7 +26,8 @@ class Player:
 
     def get_param(self,mu,lbda,n_players):
         self.mu = mu
-        self.lbda = lbda
+        if lbda!=0: 
+            self.lbda = lbda
         self.n_players = n_players
 
     def nexttime(self,time):
@@ -88,7 +89,7 @@ class Player:
         #vprint(f"Waiting time: {time-self.reservations[packet_id][1]}. Loss: {loss}")
         self.newadvance(loss,wait,used_advance,param_advance)
         self.reservations[packet_id] = (-1,-1)
-        for j in self.reservations:
+        for j in self.reservations: #Update all reservations with the new advance
             if self.reservations[j][0]>time:
                 self.reserve(time,self.reservations[j][1],j)
         #vprint(f"New advance: {self.advance}")
@@ -109,6 +110,7 @@ class CarefulPlayer(Player):
     def __init__(self):
         self.name = "Careful" 
         self.reservations = {}
+        self.lbda = 5/0.01
 
     def newadvance(self,loss,wait,used_advance,param_advance):
         return 0
@@ -118,11 +120,17 @@ class StrategicPlayerAlpha(Player):
     def __init__(self,name,alpha):
         self.name = "Strategic "+name+r" ($\alpha$="+str(alpha)+")"
         self.alpha = alpha
+        self.initial_alpha = alpha
         self.reservations = {}
 
     def newadvance(self,loss,wait,used_advance,param_advance):
         wait = max(0,wait-self.mu)
         self.advance = max(0,used_advance+wait-self.alpha*loss)
+        #Comment not to increase alpha
+        if loss==1:
+            self.alpha *= 2
+        else:
+            self.alpha = self.initial_alpha
 
 class StrategicPlayer(Player):
 
@@ -278,6 +286,7 @@ class StupidDeterministic(Player):
         self.name = "StupidDeterministic"+str(advance)+name
         self.reservations = {}
         self.advance = advance
+        self.lbda = 5/0.99
 
     def newadvance(self,loss,wait,used_advance,param_advance):
         return 0
@@ -301,7 +310,7 @@ class SmartAnalyst(Player):
 
     def newadvance(self,loss,wait,used_advance,param_advance):
         if loss==1:
-            self.advance=0
+            self.advance=0  
             self.testedalphas[self.alpha] = self.row
             self.row = 0
             if len(self.testedalphas)<10:
@@ -334,6 +343,23 @@ class RandomAnalyst(Player):
     def newadvance(self,loss,wait,used_advance,param_advance):
         self.advance = (self.n_players*self.mu/self.lbda)/(1/self.mu-self.n_players/self.lbda) if np.random.random()>self.pempty else 0
 
+class RandomAdvancedAnalyst(Player):
+
+    def __init__(self,name=""):
+        self.name = "RandomAdvancedAnalyst"+name
+        self.reservations = {}
+        self.pempty = 0
+    
+    def get_param(self,mu,lbda,n_players):
+        self.mu = mu
+        self.lbda = lbda
+        self.n_players = n_players
+        self.pempty = 1-mu/lbda
+
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        self.advance = np.random.exponential(1/(1/self.mu-self.n_players/self.lbda)) if np.random.random()>self.pempty else 0
+
+
 class Analyst(Player):
 
     def __init__(self,name=""):
@@ -342,6 +368,31 @@ class Analyst(Player):
 
     def newadvance(self,loss,wait,used_advance,param_advance):
         self.advance = (self.n_players*self.mu/self.lbda)/(1/self.mu-self.n_players/self.lbda) if loss==0 else 0
+
+class AlphaBetaConst(Player):
+
+    def __init__(self,alpha,beta,name=""):
+        self.name = "Alpha"+str(alpha)+"Beta"+str(beta)
+        self.reservations = {}
+        self.alpha = alpha
+        self.beta = beta
+
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        self.advance = max(0,self.advance - self.alpha*loss + self.beta*wait)
+
+class Charging(Player):
+    """
+    Un joueur avec un seul gros paquet 
+    """
+
+    def __init__(self,size,name=""):
+        self.name = "Charging"
+        self.reservations = {}
+        self.size = size
+        self.advance = 0
+
+    def newadvance(self,loss,wait,used_advance,param_advance):
+        return 0
 
 random1 = RandomPlayer()
 mixal0 = MixedAlphaPlayer("MixAlpha0",1)
@@ -371,4 +422,6 @@ stup6 = StupidDeterministic(6)
 stup7 = StupidDeterministic(7)
 smartanalyst = SmartAnalyst(0.2)
 randanalyst = RandomAnalyst()
+randadvancedanalyst = RandomAdvancedAnalyst()
 analyst = Analyst()
+charging = Charging(100)

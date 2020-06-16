@@ -31,7 +31,10 @@ class Game:
         @param mu: the parameter mu of the game (mean treatment time of a packet by the server) (default lbda/number of players)
         @return: Object Game
         """
-        np.random.seed(0)
+        seed = 0
+        #seed = int(np.random.random()*1000000)
+        np.random.seed(seed)
+        print(f"Seed = {seed}")
         self.new = True #The game haven't started yet
         self.initial_size = initial_size #The number of packets already created
         self.players = [deepcopy(p) for p in players]  #The list of players playing the game
@@ -40,17 +43,23 @@ class Game:
         self.event_times = [] #The list of times of next happening events (sorted), and, event type (0: revelation, 1: reservation, 2: treatment), player concerned, packet concerned
         self.event = (0,0,-1,-1)
         self.time = -1 #The time of the game
+        if self.lbda==0:
+            self.lbda = 1/sum([1/self.players[i].lbda for i in range(self.n_players)])
+            print(self.lbda)
         if mu==0:
-            self.mu = sum([self.players[i].lbda for i in range(self.n_players)])/self.n_players/self.n_players #The mu of the game
+            if self.lbda==0:
+                self.mu = (1/sum([1/self.players[i].lbda for i in range(self.n_players)]))/self.n_players/self.n_players #The mu of the game
+            else:
+                self.mu = self.lbda
         else:
             self.mu = mu #The mean treatment times of the packets
         #Giving mu, lambda and the number of players to each player
         for p in self.players:
-            p.get_param(self.mu,self.lbda,self.n_players)
+            p.get_param(self.mu,lbda*self.n_players,self.n_players)
         print(f"mu={self.mu}")
-        if self.mu<self.lbda/self.n_players:
-            self.theoretical_wait = (self.n_players*self.mu/self.lbda)/(1/self.mu-self.n_players/self.lbda)
-            self.theoretical_time_in_sys = 1/(1/self.mu-self.n_players/self.lbda)
+        if self.mu<self.lbda:
+            self.theoretical_wait = (self.mu/self.lbda)/(1/self.mu-1/self.lbda)
+            self.theoretical_time_in_sys = 1/(1/self.mu-1/self.lbda)
         else:
             self.theoretical_wait = 'inf'
             self.theoretical_time_in_sys = 'inf'
@@ -71,12 +80,19 @@ class Game:
                 ari = {}
                 revi = {}
                 time = 0
-                for j in range(initial_size):
-                    time += np.random.exponential(self.lbda)
-                    revelation = max(0,time-2*nu*np.random.random())
-                    ari[j] = time
-                    revi[j] = revelation
-                    self.event_times.append((revelation,0,i,j))
+                if self.players[i].name == "Charging":
+                    #If the player is a charging player, he only have a heavy packet to send at the beginning
+                    for j in range(self.players[i].size):
+                        ari[j] = 0
+                        revi[j] = 0
+                        self.event_times.append((0,0,i,j))
+                else:
+                    for j in range(initial_size):
+                        time += np.random.exponential(self.players[i].lbda)
+                        revelation = max(0,time-2*nu*np.random.random())
+                        ari[j] = time
+                        revi[j] = revelation
+                        self.event_times.append((revelation,0,i,j))
                 ar.append(ari)
                 rev.append(revi)
             self.event_times.sort()
@@ -104,6 +120,10 @@ class Game:
         self.othttt = 0
         self.othttt2 = 0
 
+        #Courbes données
+        self.timeinfile = []
+        self.packetsinfile = []
+
     def update(self,player_i,packet_id):
         """
         @brief: Updates the packets for player i, after one of his packets was treated, so his list of packets remains full 
@@ -112,7 +132,7 @@ class Game:
         @return: None
         """
         nu = self.players[player_i].nu
-        time = max(self.last_arrival[player_i],self.time) + np.random.exponential(self.lbda)
+        time = max(self.last_arrival[player_i],self.time) + np.random.exponential(self.players[player_i].lbda)
         self.last_arrival[player_i] = time 
         self.arrival_times[player_i][packet_id] = time
         self.revelation[player_i][packet_id] = max(self.time+0.01,time-2*nu*np.random.random())
@@ -253,13 +273,18 @@ class Game:
             self.tota.append(sum([self.players[i].advance for i in range(self.n_players)]))
             self.event = self.event_times.pop(0)
             self.time = self.event[0]
+            #self.packetsinfile.append((self.time,len(self.packets))) #Pour tracer le nombre de packets dans la file
+            #self.timeinfile.append((self.time,sum([e[3] for e in self.packets]))) #Pour tracer la courbe de l'attente dans la file
+            #vprint(f"Waiting time in the file: {self.timeinfile[-1][1]}")
             #vprint("------")
             #if funs.stop:
-            #    input()
+                #input()
             self.othttt2 += tt.time()-ttt
         self.totttt = tt.time() - self.totttt
         print(f"\nTheoretical mean wait: {self.theoretical_wait}")
         print(f"Theoretical mean time in sys: {self.theoretical_time_in_sys}\n")
+        #ppm.plt.plot([e[0] for e in self.timeinfile],[e[1] for e in self.timeinfile])
+        #ppm.plt.plot([e[0] for e in self.packetsinfile],[e[1] for e in self.packetsinfile])
         if plot:
             ppm.plotTime(np.array(self.times),np.array(self.tota),"Total Advance")
         for i in range(self.n_players):
@@ -268,3 +293,28 @@ class Game:
                 ppm.plotXYTime(np.array(self.y[i][3]),np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
             print(f"Player {i+1} ({self.players[i].name}):\n - Total packets processed: {self.players[i].processed}\n - Total packets lost: {self.players[i].total_loss}\n - Total waiting time: {self.players[i].total_waiting_time}\n - Mean waiting time: {self.players[i].total_waiting_time/self.players[i].processed}\n - Final advance: {self.players[i].advance}\n")
         print(f"TTT:\n - Revelation: {self.revttt}s\n - Reservation: {self.resttt}s\n - Treatment: {self.trettt}s\n - Insertion: {self.insttt}s\n - Others: {self.othttt}s\n - Others2: {self.othttt2}s\n - Total: {self.totttt}s") 
+        if self.n_players>1:
+            scorep0 = funs.evalperf(self.theoretical_time_in_sys,self.players[0].processed,self.players[0].total_waiting_time,self.players[0].total_loss)
+            scorep1 = funs.evalperf(self.theoretical_time_in_sys,self.players[1].processed,self.players[1].total_waiting_time,self.players[1].total_loss)
+            return ((self.players[0].processed,self.players[0].total_waiting_time/self.players[0].processed,self.players[0].advance,scorep0,self.players[0].processed/(self.players[0].processed+self.players[0].total_loss)),(self.players[1].processed,self.players[1].total_waiting_time/self.players[1].processed,self.players[1].advance,scorep1,self.players[1].processed/(self.players[1].processed+self.players[1].total_loss)))
+        return 0
+
+def simu(alpha_init,alpha_end,step_alpha,beta_init,beta_end,step_beta,duration):
+    lbda = 5
+    alpharange = np.arange(alpha_init,alpha_end,step_alpha)
+    betarange = np.arange(beta_init,beta_end,step_beta)
+    results = {}
+    for beta in betarange:
+        print(beta)
+        for alpha in alpharange:
+            print(' ',alpha)
+            careful = players.CarefulPlayer()
+            alphabeta = players.AlphaBetaConst(alpha,beta)
+            #simu
+            for mu in np.arange(0.5,4.5,0.5):
+                g = Game([careful,alphabeta,careful,careful,careful,careful,careful,careful,careful,careful,careful],lbda,500,mu)
+                results[(mu,alpha,beta)] = g.game(False,duration)
+                print(results[(mu,alpha,beta)][0][3]," ",results[(mu,alpha,beta)][1][3])
+                if results[(mu,alpha,beta)][0][1]>results[(mu,alpha,beta)][1][1]:
+                    print("WOOOOOOOOOOOOOW",mu,alpha,beta)
+    return results
