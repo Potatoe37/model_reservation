@@ -1,4 +1,5 @@
-figures/*.png
+*.png
 __pycache__/*
 file.txt
 data.txt
+.*
