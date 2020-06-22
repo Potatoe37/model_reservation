@@ -1,5 +1,8 @@
 *.png
+*.eps 
+*.svg
 __pycache__/*
 file.txt
 data.txt
 .*
+*.bin
