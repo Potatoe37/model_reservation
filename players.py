@@ -4,7 +4,7 @@ from functions import vprint
 
 class Player:
     name = "" #The name of the player
-    nu = 500 #The nu of the player
+    nu = 5000 #The nu of the player
     lbda = 50 #The lambda of the player
     mu = 1 #The mu of the game
     n_players = 1 #The number of players of the game
