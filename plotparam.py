@@ -24,7 +24,7 @@ def plotXY(x, y, z, name):
     plt.savefig('figures/' + name +'.png', bbox_inches='tight', dpi=dpi)
     plt.close()
 
-def plotXYTime(t, x, y, z, name):
+def plotXYTime(t, x, y, z, name, f='png'):
     nSamples = np.shape(x)[0]
     rangeplot = range(0, nSamples)
 
@@ -40,8 +40,8 @@ def plotXYTime(t, x, y, z, name):
     ax2.legend()
     ax3.legend()
     ax3.set_xlim(left=0, right=t[nSamples-1])
-    plt.savefig('figures/' + name +'.png', bbox_inches='tight', dpi=dpi)
-    plt.close()
+    plt.savefig('figures/' + name +'.'+f, format=f)
+    plt.show()
 
 
 def plotTime(x,y,name):
