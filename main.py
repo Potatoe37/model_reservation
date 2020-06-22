@@ -7,6 +7,8 @@ from copy import deepcopy
 import numpy as np
 import bisect
 import time as tt
+import pickle #Save lists data
+import os.path
 
 class Game:
 
@@ -31,10 +33,12 @@ class Game:
         @param mu: the parameter mu of the game (mean treatment time of a packet by the server) (default lbda/number of players)
         @return: Object Game
         """
-        seed = 0
-        #seed = int(np.random.random()*1000000)
-        np.random.seed(seed)
-        print(f"Seed = {seed}")
+        self.seed = 0
+        #self.seed = int(np.random.random()*1000000)
+        np.random.seed(self.seed)
+        print(f"Seed = {self.seed}")
+        self.keep_data = True #Saves the data in a file such that you don't make 2 times the same simulation
+        self.use_data = True #True if you want to use your saved data, non if you want to execute the complete simulation even if it was already done
         self.new = True #The game haven't started yet
         self.initial_size = initial_size #The number of packets already created
         self.players = [deepcopy(p) for p in players]  #The list of players playing the game
@@ -247,6 +251,25 @@ class Game:
             f.write("ArTime\tResTime\tRetTime\tP\tAdv\tL\n")
             f.close()
         self.new = False
+        if self.use_data:
+            filename = str(self.mu) + "_"
+            for i in range(self.n_players):
+                filename += self.players[i].name + "_"
+            if os.path.isfile("data/"+filename+str(duration)+"_"+str(self.seed)+".bin"):
+                print("This simulation has already been done, and the data have been saved. Here are the results of that simulation. Be sure that the code has not changed since that last simulation")
+                with open("data/"+filename+str(duration)+"_"+str(self.seed)+".bin","rb") as fp:
+                    data = pickle.load(fp)
+                self.time = data[0]
+                self.times = data[1][0].tolist()
+                self.tota = data[1][1].tolist()
+                for i in range(self.n_players):
+                    filename += self.players[i].name + "_"
+                    self.y[i] = data[i+2][0]
+                    self.players[i].processed = data[i+2][1]
+                    self.players[i].total_loss = data[i+2][2]
+                    self.players[i].total_waiting_time = data[i+2][3]
+                    self.players[i].processed = data[i+2][4]
+                    self.players[i].advance = data[i+2][5]
         while self.time<duration:
             ttt = tt.time()
             if self.time==-1:
@@ -285,12 +308,20 @@ class Game:
         print(f"Theoretical mean time in sys: {self.theoretical_time_in_sys}\n")
         #ppm.plt.plot([e[0] for e in self.timeinfile],[e[1] for e in self.timeinfile])
         #ppm.plt.plot([e[0] for e in self.packetsinfile],[e[1] for e in self.packetsinfile])
+        if self.keep_data:
+            filename = str(self.mu) + "_"
+            filecontent = [duration,[np.array(self.times),np.array(self.tota)]]
+            for i in range(self.n_players):
+                filename += self.players[i].name + "_"
+                filecontent.append([self.y[i],self.players[i].processed,self.players[i].total_loss,self.players[i].total_waiting_time,self.players[i].processed,self.players[i].advance])
+            with open("data/"+filename+str(duration)+"_"+str(self.seed)+".bin","wb") as fp:
+                pickle.dump(filecontent,fp)
         if plot:
             ppm.plotTime(np.array(self.times),np.array(self.tota),"Total Advance")
         for i in range(self.n_players):
             if plot:
                 #ppm.plotXY(np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
-                ppm.plotXYTime(np.array(self.y[i][3]),np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})")
+                ppm.plotXYTime(np.array(self.y[i][3]),np.array(self.y[i][0]),np.array(self.y[i][1]),np.array(self.y[i][2]),f"Player{i}_({self.players[i].name})",'png')
             print(f"Player {i+1} ({self.players[i].name}):\n - Total packets processed: {self.players[i].processed}\n - Total packets lost: {self.players[i].total_loss}\n - Total waiting time: {self.players[i].total_waiting_time}\n - Mean waiting time: {self.players[i].total_waiting_time/self.players[i].processed}\n - Final advance: {self.players[i].advance}\n")
         print(f"TTT:\n - Revelation: {self.revttt}s\n - Reservation: {self.resttt}s\n - Treatment: {self.trettt}s\n - Insertion: {self.insttt}s\n - Others: {self.othttt}s\n - Others2: {self.othttt2}s\n - Total: {self.totttt}s") 
         if self.n_players>1:
@@ -311,10 +342,10 @@ def simu(alpha_init,alpha_end,step_alpha,beta_init,beta_end,step_beta,duration):
             careful = players.CarefulPlayer()
             alphabeta = players.AlphaBetaConst(alpha,beta)
             #simu
-            for mu in np.arange(0.5,4.5,0.5):
+            for mu in np.arange(3.5,4.5,0.5):
                 g = Game([careful,alphabeta,careful,careful,careful,careful,careful,careful,careful,careful,careful],lbda,500,mu)
                 results[(mu,alpha,beta)] = g.game(False,duration)
                 print(results[(mu,alpha,beta)][0][3]," ",results[(mu,alpha,beta)][1][3])
-                if results[(mu,alpha,beta)][0][1]>results[(mu,alpha,beta)][1][1]:
+                if results[(mu,alpha,beta)][0][3]>results[(mu,alpha,beta)][1][3]:
                     print("WOOOOOOOOOOOOOW",mu,alpha,beta)
     return results
